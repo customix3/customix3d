@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/context/AuthContext';
 
-/** Guest checkout allowed — no login required */
+/** Checkout requires login / signup */
 export default function CheckoutPage() {
   const { items, total, clear } = useCart();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [done, setDone] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -17,13 +19,43 @@ export default function CheckoutPage() {
     pincode: '',
   });
 
+  // Redirect to login if not signed in
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      navigate('/login?redirect=/checkout', { replace: true });
+    }
+  }, [user, authLoading, navigate]);
+
+  // Prefill from account when available
+  useEffect(() => {
+    if (!user) return;
+    setForm((f) => ({
+      ...f,
+      name: f.name || user.name || '',
+      email: f.email || user.email || '',
+      whatsapp: f.whatsapp || user.whatsapp || '',
+    }));
+  }, [user]);
+
   const amount = typeof total === 'function' ? total() : 0;
+
+  if (authLoading || !user) {
+    return (
+      <div className="mx-auto max-w-lg px-4 py-20 text-center text-slate-500">
+        Checking account…
+      </div>
+    );
+  }
 
   if (items.length === 0 && !done) {
     return (
       <div className="mx-auto max-w-lg px-4 py-20 text-center">
         <h1 className="font-display text-2xl font-bold">Your cart is empty</h1>
-        <Link to="/products" className="mt-6 inline-block rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white">
+        <Link
+          to="/products"
+          className="mt-6 inline-block rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white"
+        >
           Shop now
         </Link>
       </div>
@@ -37,8 +69,11 @@ export default function CheckoutPage() {
         <p className="text-slate-600 mb-6">
           Demo payment successful. We will update you on WhatsApp.
         </p>
-        <Link to="/products" className="inline-block rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white">
-          Continue shopping
+        <Link
+          to="/orders"
+          className="inline-block rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white"
+        >
+          View orders
         </Link>
       </div>
     );
@@ -51,7 +86,6 @@ export default function CheckoutPage() {
       return;
     }
     setLoading(true);
-    // Demo payment — no real charge, no login required
     setTimeout(() => {
       clear();
       setDone(true);
@@ -62,7 +96,9 @@ export default function CheckoutPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">
       <h1 className="font-display text-3xl font-bold mb-2">Checkout</h1>
-      <p className="text-sm text-slate-500 mb-8">No account needed — pay as guest (TEST mode)</p>
+      <p className="text-sm text-slate-500 mb-8">
+        Signed in as <strong>{user.email}</strong> · TEST payment mode
+      </p>
 
       <form onSubmit={submit} className="grid gap-8 lg:grid-cols-5">
         <div className="lg:col-span-3 space-y-6">
@@ -79,10 +115,11 @@ export default function CheckoutPage() {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium">Email</label>
+                <label className="text-sm font-medium">Email *</label>
                 <input
                   type="email"
                   className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
+                  required
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                 />
