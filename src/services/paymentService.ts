@@ -1,18 +1,21 @@
-export interface PaymentResult {
-  success: boolean
-  transactionId?: string
-  message?: string
-}
+export type PaymentResult = { paymentId: string; orderId: string };
 
-export class DemoPaymentProvider {
-  async pay(amount: number): Promise<PaymentResult> {
-    await new Promise((r) => setTimeout(r, 800))
-    return {
-      success: true,
-      transactionId: 'demo_' + Date.now(),
-      message: `Demo payment of ₹${amount} successful`,
-    }
-  }
-}
+export const paymentService = {
+  async createPayment(input: {
+    amount: number;
+    currency: string;
+    orderId: string;
+    customerName: string;
+    customerEmail: string;
+    customerPhone: string;
+  }): Promise<{ paymentId: string }> {
+    // TEST / demo provider — swap for Razorpay / Cashfree later
+    await new Promise((r) => setTimeout(r, 400));
+    return { paymentId: 'pay_demo_' + Date.now() };
+  },
 
-export const paymentService = new DemoPaymentProvider()
+  async handlePaymentSuccess(input: { paymentId: string; orderId: string }): Promise<PaymentResult> {
+    await new Promise((r) => setTimeout(r, 200));
+    return { paymentId: input.paymentId, orderId: input.orderId };
+  },
+};
