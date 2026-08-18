@@ -1,70 +1,169 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useCart } from '@/context/CartContext'
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useCart } from '@/context/CartContext';
 
+/** Guest checkout allowed — no login required */
 export default function CheckoutPage() {
-  const { items, total, clear } = useCart()
-  const navigate = useNavigate()
-  const [done, setDone] = useState(false)
-  const [form, setForm] = useState({ name: '', phone: '', address: '', city: '', pincode: '' })
+  const { items, total, clear } = useCart();
+  const navigate = useNavigate();
+  const [done, setDone] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    whatsapp: '',
+    address: '',
+    city: '',
+    pincode: '',
+  });
+
+  const amount = typeof total === 'function' ? total() : 0;
 
   if (items.length === 0 && !done) {
     return (
-      <div className="max-w-lg mx-auto py-20 text-center">
-        <p>Cart is empty</p>
+      <div className="mx-auto max-w-lg px-4 py-20 text-center">
+        <h1 className="font-display text-2xl font-bold">Your cart is empty</h1>
+        <Link to="/products" className="mt-6 inline-block rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white">
+          Shop now
+        </Link>
       </div>
-    )
+    );
   }
 
   if (done) {
     return (
-      <div className="max-w-md mx-auto px-4 py-20 text-center">
-        <h1 className="font-display text-2xl font-bold mb-3">Order placed!</h1>
-        <p className="text-ink-600 mb-6">Demo payment successful. You will receive updates on WhatsApp.</p>
-        <button type="button" className="btn-primary" onClick={() => navigate('/orders')}>View orders</button>
+      <div className="mx-auto max-w-md px-4 py-20 text-center">
+        <h1 className="font-display text-2xl font-bold mb-3">Order placed! 🎉</h1>
+        <p className="text-slate-600 mb-6">
+          Demo payment successful. We will update you on WhatsApp.
+        </p>
+        <Link to="/products" className="inline-block rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white">
+          Continue shopping
+        </Link>
       </div>
-    )
+    );
   }
 
   const submit = (e: React.FormEvent) => {
-    e.preventDefault()
-    clear()
-    setDone(true)
-  }
+    e.preventDefault();
+    if (!form.whatsapp.trim()) {
+      alert('WhatsApp number is required');
+      return;
+    }
+    setLoading(true);
+    // Demo payment — no real charge, no login required
+    setTimeout(() => {
+      clear();
+      setDone(true);
+      setLoading(false);
+    }, 600);
+  };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-10">
-      <h1 className="font-display text-3xl font-bold mb-8">Checkout</h1>
-      <form onSubmit={submit} className="grid md:grid-cols-2 gap-8">
-        <div className="space-y-4">
-          <h2 className="font-medium">Shipping</h2>
-          {(['name', 'phone', 'address', 'city', 'pincode'] as const).map((k) => (
-            <div key={k}>
-              <label className="text-sm capitalize">{k}</label>
-              <input
-                className="input mt-1"
-                required
-                value={form[k]}
-                onChange={(e) => setForm({ ...form, [k]: e.target.value })}
-              />
-            </div>
-          ))}
-        </div>
-        <div>
-          <div className="card p-6">
-            <h2 className="font-medium mb-4">Order summary</h2>
-            {items.map((i) => (
-              <div key={i.id} className="flex justify-between text-sm py-2 border-b border-cream-200">
-                <span>{i.name} × {i.quantity}</span>
-                <span>₹{i.price * i.quantity}</span>
+    <div className="mx-auto max-w-5xl px-4 py-10">
+      <h1 className="font-display text-3xl font-bold mb-2">Checkout</h1>
+      <p className="text-sm text-slate-500 mb-8">No account needed — pay as guest (TEST mode)</p>
+
+      <form onSubmit={submit} className="grid gap-8 lg:grid-cols-5">
+        <div className="lg:col-span-3 space-y-6">
+          <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+            <h2 className="font-semibold mb-4">Contact</h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="text-sm font-medium">Full name *</label>
+                <input
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
+                  required
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                />
               </div>
-            ))}
-            <p className="mt-4 font-semibold text-lg">Total ₹{total()}</p>
-            <p className="text-xs text-ink-500 mt-2">TEST payment mode — no real charge</p>
-            <button type="submit" className="btn-primary w-full mt-6">Pay (Demo)</button>
+              <div>
+                <label className="text-sm font-medium">Email</label>
+                <input
+                  type="email"
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="text-sm font-medium">WhatsApp *</label>
+                <input
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
+                  required
+                  placeholder="+91 9XXXXXXXXX"
+                  value={form.whatsapp}
+                  onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
+            <h2 className="font-semibold mb-4">Shipping</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">Address *</label>
+                <input
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
+                  required
+                  value={form.address}
+                  onChange={(e) => setForm({ ...form, address: e.target.value })}
+                />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="text-sm font-medium">City *</label>
+                  <input
+                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
+                    required
+                    value={form.city}
+                    onChange={(e) => setForm({ ...form, city: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Pincode *</label>
+                  <input
+                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
+                    required
+                    value={form.pincode}
+                    onChange={(e) => setForm({ ...form, pincode: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="lg:col-span-2">
+          <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm sticky top-6">
+            <h2 className="font-semibold mb-4">Order summary</h2>
+            <ul className="space-y-3 text-sm">
+              {items.map((i) => (
+                <li key={i.id} className="flex justify-between gap-2">
+                  <span className="text-slate-600">
+                    {i.name} × {i.quantity}
+                  </span>
+                  <span className="font-medium">₹{i.price * i.quantity}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-4 border-t border-slate-100 pt-4 flex justify-between font-semibold text-lg">
+              <span>Total</span>
+              <span>₹{amount}</span>
+            </div>
+            <p className="mt-2 text-xs text-slate-400">TEST MODE — no real payment</p>
+            <button
+              type="submit"
+              disabled={loading}
+              className="mt-6 w-full rounded-full bg-slate-900 py-3.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+            >
+              {loading ? 'Processing…' : `Pay ₹${amount}`}
+            </button>
           </div>
         </div>
       </form>
     </div>
-  )
+  );
 }

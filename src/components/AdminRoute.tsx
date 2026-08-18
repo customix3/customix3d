@@ -1,22 +1,17 @@
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
+
+function isAdminLoggedIn() {
+  if (typeof window === 'undefined') return false;
+  // Support both keys (old + new)
+  return (
+    localStorage.getItem('cmx_admin') === '1' ||
+    localStorage.getItem('customix3d-admin') === '1'
+  );
+}
 
 export default function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { isAdmin, loading } = useAuth();
-  const localAdmin =
-    typeof window !== 'undefined' && localStorage.getItem('customix3d-admin') === '1';
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-white">
-        Loading…
-      </div>
-    );
-  }
-
-  if (!isAdmin && !localAdmin) {
+  if (!isAdminLoggedIn()) {
     return <Navigate to="/admin/login" replace />;
   }
-
   return <>{children}</>;
 }
