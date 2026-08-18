@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Cloud, AlertTriangle } from 'lucide-react';
 import { useProducts } from '@/store/productsStore';
 import { CATEGORIES } from '@/data/demoProducts';
 import type { Product } from '@/types/product';
@@ -15,14 +15,17 @@ const emptyForm = {
 };
 
 export default function AdminProducts() {
-  const { products, addProduct, updateProduct, deleteProduct } = useProducts();
+  const { products, loading, error, addProduct, updateProduct, deleteProduct } = useProducts();
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(emptyForm);
+  const [formError, setFormError] = useState('');
 
   const openAdd = () => {
     setEditingId(null);
     setForm(emptyForm);
+    setFormError('');
     setOpen(true);
   };
 
@@ -37,14 +40,16 @@ export default function AdminProducts() {
       description: p.description || '',
       active: p.active !== false,
     });
+    setFormError('');
     setOpen(true);
   };
 
-  const save = (e: React.FormEvent) => {
+  const save = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError('');
     const price = Number(form.price);
     if (!form.name.trim() || !price || price <= 0) {
-      alert('Name and valid price required');
+      setFormError('Name and valid price required');
       return;
     }
     const payload = {
@@ -58,17 +63,33 @@ export default function AdminProducts() {
       description: form.description.trim() || form.name.trim(),
       active: form.active,
     };
-    if (editingId) {
-      updateProduct(editingId, payload);
-    } else {
-      addProduct(payload);
+    setSaving(true);
+    try {
+      if (editingId) {
+        await updateProduct(editingId, payload);
+      } else {
+        await addProduct(payload);
+      }
+      setOpen(false);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Save failed';
+      setFormError(
+        msg.includes('permission') || msg.includes('Permission')
+          ? 'Permission denied. Publish Firestore rules (see FIRESTORE_SETUP.md).'
+          : msg
+      );
+    } finally {
+      setSaving(false);
     }
-    setOpen(false);
   };
 
-  const remove = (id: string, name: string) => {
-    if (!confirm(`Delete "${name}"?`)) return;
-    deleteProduct(id);
+  const remove = async (id: string, name: string) => {
+    if (!confirm(`Delete "${name}"? This is permanent on all devices.`)) return;
+    try {
+      await deleteProduct(id);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Delete failed');
+    }
   };
 
   return (
@@ -76,7 +97,10 @@ export default function AdminProducts() {
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="font-display text-2xl font-bold">Products</h1>
-          <p className="text-sm text-slate-500 mt-1">{products.length} products · saved in browser</p>
+          <p className="text-sm text-slate-500 mt-1 flex items-center gap-1.5">
+            <Cloud className="h-3.5 w-3.5" />
+            {loading ? 'Syncing…' : `${products.length} products · synced via Firebase`}
+          </p>
         </div>
         <button
           type="button"
@@ -86,6 +110,19 @@ export default function AdminProducts() {
           <Plus className="h-4 w-4" /> Add product
         </button>
       </div>
+
+      {error && (
+        <div className="mb-4 flex gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <AlertTriangle className="h-5 w-5 shrink-0" />
+          <div>
+            <p className="font-medium">Cloud sync issue</p>
+            <p className="mt-0.5">{error}</p>
+            <p className="mt-1 text-xs">
+              Open Firebase Console → Firestore → Rules → paste from FIRESTORE_SETUP.md → Publish
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
@@ -148,7 +185,7 @@ export default function AdminProducts() {
                   </td>
                 </tr>
               ))}
-              {products.length === 0 && (
+              {!loading && products.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-4 py-10 text-center text-slate-500">
                     No products. Click Add product.
@@ -170,6 +207,9 @@ export default function AdminProducts() {
               </button>
             </div>
             <form onSubmit={save} className="p-5 space-y-4">
+              {formError && (
+                <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{formError}</p>
+              )}
               <div>
                 <label className="text-sm font-medium">Name *</label>
                 <input
@@ -251,9 +291,10 @@ export default function AdminProducts() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 rounded-full bg-slate-900 py-2.5 text-sm font-semibold text-white"
+                  disabled={saving}
+                  className="flex-1 rounded-full bg-slate-900 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
                 >
-                  {editingId ? 'Save changes' : 'Add product'}
+                  {saving ? 'Saving…' : editingId ? 'Save changes' : 'Add product'}
                 </button>
               </div>
             </form>

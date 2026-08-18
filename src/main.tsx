@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast';
 import App from './App';
 import { AuthProvider } from './context/AuthContext';
 import { SiteProvider } from './context/SiteContext';
+import CatalogBootstrap from './components/CatalogBootstrap';
 import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
@@ -12,14 +13,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <BrowserRouter>
       <SiteProvider>
         <AuthProvider>
+          <CatalogBootstrap />
           <App />
-          <Toaster
-            position="top-right"
-            toastOptions={{
-              duration: 2800,
-              style: { borderRadius: '12px', background: '#0f172a', color: '#fff' },
-            }}
-          />
+          <Toaster position="top-center" />
         </AuthProvider>
       </SiteProvider>
     </BrowserRouter>

@@ -68,10 +68,8 @@ export default function CheckoutPage() {
       <div className="mx-auto max-w-md px-4 py-20 text-center">
         <h1 className="font-display text-2xl font-bold mb-3">Payment successful 🎉</h1>
         <p className="text-slate-600 mb-2">Order <strong>{orderId}</strong></p>
-        {paymentId && (
-          <p className="text-xs text-slate-400 mb-6">Payment ID: {paymentId}</p>
-        )}
-        <p className="text-slate-600 mb-6">We will update you on WhatsApp.</p>
+        {paymentId && <p className="text-xs text-slate-400 mb-6">Payment ID: {paymentId}</p>}
+        <p className="text-slate-600 mb-6">Saved to cloud · visible on all admin devices.</p>
         <Link
           to="/orders"
           className="inline-block rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white"
@@ -99,7 +97,7 @@ export default function CheckoutPage() {
         description: `CustoMix3D order · ${items.length} item(s)`,
       });
 
-      const order = addOrder({
+      const order = await addOrder({
         customerName: form.name,
         customerEmail: form.email,
         customerWhatsapp: form.whatsapp,
@@ -125,7 +123,11 @@ export default function CheckoutPage() {
       setDone(true);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Payment failed';
-      if (msg !== 'Payment cancelled') setError(msg);
+      if (msg.includes('permission') || msg.includes('Permission')) {
+        setError('Order save failed (Firestore rules). Publish rules from FIRESTORE_SETUP.md');
+      } else if (msg !== 'Payment cancelled') {
+        setError(msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -135,7 +137,8 @@ export default function CheckoutPage() {
     <div className="mx-auto max-w-5xl px-4 py-10">
       <h1 className="font-display text-3xl font-bold mb-2">Checkout</h1>
       <p className="text-sm text-slate-500 mb-8">
-        Signed in as <strong>{user.email}</strong> · Razorpay <span className="text-amber-600 font-medium">TEST</span>
+        Signed in as <strong>{user.email}</strong> · Razorpay{' '}
+        <span className="text-amber-600 font-medium">TEST</span>
       </p>
 
       <form onSubmit={submit} className="grid gap-8 lg:grid-cols-5">
@@ -228,7 +231,7 @@ export default function CheckoutPage() {
               <span>Total</span>
               <span>₹{amount}</span>
             </div>
-            <p className="mt-2 text-xs text-amber-600">Razorpay TEST mode — use test cards</p>
+            <p className="mt-2 text-xs text-amber-600">Razorpay TEST mode</p>
             {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
             <button
               type="submit"

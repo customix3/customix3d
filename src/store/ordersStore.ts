@@ -1,5 +1,10 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import {
+  subscribeOrders,
+  createOrderFs,
+  patchOrderStatus,
+  type FsOrder,
+} from '@/services/firestoreCatalog';
 
 export type OrderStatus =
   | 'Pending'
@@ -17,48 +22,56 @@ export type OrderItem = {
   image?: string;
 };
 
-export type Order = {
-  id: string;
-  createdAt: string;
-  customerName: string;
-  customerEmail: string;
-  customerWhatsapp: string;
-  address: string;
-  city: string;
-  pincode: string;
-  items: OrderItem[];
-  total: number;
-  status: OrderStatus;
-  paymentId?: string;
-  razorpayOrderId?: string;
-};
+export type Order = FsOrder & { status: OrderStatus };
 
 interface OrdersState {
   orders: Order[];
-  addOrder: (o: Omit<Order, 'id' | 'createdAt' | 'status'> & { status?: OrderStatus; paymentId?: string }) => Order;
-  updateStatus: (id: string, status: OrderStatus) => void;
+  loading: boolean;
+  error: string | null;
+  init: () => () => void;
+  addOrder: (
+    o: Omit<Order, 'id' | 'createdAt' | 'status'> & { status?: OrderStatus; paymentId?: string }
+  ) => Promise<Order>;
+  updateStatus: (id: string, status: OrderStatus) => Promise<void>;
 }
 
-export const useOrders = create<OrdersState>()(
-  persist(
-    (set, get) => ({
-      orders: [],
-      addOrder: (input) => {
-        const order: Order = {
-          ...input,
-          id: 'ORD-' + Date.now().toString(36).toUpperCase(),
-          createdAt: new Date().toISOString(),
-          status: input.status || 'Paid',
-        };
-        set({ orders: [order, ...get().orders] });
-        return order;
-      },
-      updateStatus: (id, status) => {
+let unsub: (() => void) | null = null;
+
+export const useOrders = create<OrdersState>((set) => ({
+  orders: [],
+  loading: true,
+  error: null,
+
+  init: () => {
+    if (unsub) return unsub;
+    set({ loading: true });
+    unsub = subscribeOrders(
+      (list) => {
         set({
-          orders: get().orders.map((o) => (o.id === id ? { ...o, status } : o)),
+          orders: list.map((o) => ({ ...o, status: o.status as OrderStatus })),
+          loading: false,
+          error: null,
         });
       },
-    }),
-    { name: 'customix3d-orders' }
-  )
-);
+      (err) => {
+        set({ loading: false, error: err.message });
+      }
+    );
+    return () => {
+      unsub?.();
+      unsub = null;
+    };
+  },
+
+  addOrder: async (input) => {
+    const order = await createOrderFs({
+      ...input,
+      status: input.status || 'Paid',
+    });
+    return { ...order, status: (order.status as OrderStatus) || 'Paid' };
+  },
+
+  updateStatus: async (id, status) => {
+    await patchOrderStatus(id, status);
+  },
+}));

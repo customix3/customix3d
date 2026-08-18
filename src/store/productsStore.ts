@@ -1,39 +1,93 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import type { Product } from '@/types/product';
 import { DEMO_PRODUCTS } from '@/data/demoProducts';
+import {
+  subscribeProducts,
+  createProduct,
+  patchProduct,
+  removeProduct,
+  seedProductsIfEmpty,
+} from '@/services/firestoreCatalog';
 
 interface ProductsState {
   products: Product[];
-  addProduct: (p: Omit<Product, 'id'>) => Product;
-  updateProduct: (id: string, patch: Partial<Product>) => void;
-  deleteProduct: (id: string) => void;
+  loading: boolean;
+  error: string | null;
+  ready: boolean;
+  init: () => () => void;
+  addProduct: (p: Omit<Product, 'id'>) => Promise<Product>;
+  updateProduct: (id: string, patch: Partial<Product>) => Promise<void>;
+  deleteProduct: (id: string) => Promise<void>;
   getById: (id: string) => Product | undefined;
 }
 
-export const useProducts = create<ProductsState>()(
-  persist(
-    (set, get) => ({
-      products: DEMO_PRODUCTS.map((p) => ({ ...p, active: true })),
-      addProduct: (input) => {
-        const product: Product = {
-          ...input,
-          id: 'p_' + Date.now().toString(36),
-          active: input.active !== false,
-        };
-        set({ products: [product, ...get().products] });
-        return product;
-      },
-      updateProduct: (id, patch) => {
+let unsub: (() => void) | null = null;
+let seeded = false;
+
+export const useProducts = create<ProductsState>((set, get) => ({
+  products: DEMO_PRODUCTS.map((p) => ({ ...p, active: true })),
+  loading: true,
+  error: null,
+  ready: false,
+
+  init: () => {
+    if (unsub) return unsub;
+    set({ loading: true, error: null });
+
+    const run = async () => {
+      try {
+        if (!seeded) {
+          seeded = true;
+          await seedProductsIfEmpty();
+        }
+      } catch (e) {
+        console.warn('seed products', e);
         set({
-          products: get().products.map((p) => (p.id === id ? { ...p, ...patch } : p)),
+          error:
+            'Firestore permission error. Publish rules for /products (see FIRESTORE_SETUP.md).',
         });
-      },
-      deleteProduct: (id) => {
-        set({ products: get().products.filter((p) => p.id !== id) });
-      },
-      getById: (id) => get().products.find((p) => p.id === id),
-    }),
-    { name: 'customix3d-products' }
-  )
-);
+      }
+
+      unsub = subscribeProducts(
+        (list) => {
+          set({
+            products: list.length ? list : DEMO_PRODUCTS.map((p) => ({ ...p, active: true })),
+            loading: false,
+            ready: true,
+            error: null,
+          });
+        },
+        (err) => {
+          set({
+            loading: false,
+            ready: true,
+            error: err.message || 'Failed to load products from cloud',
+          });
+        }
+      );
+    };
+
+    void run();
+
+    return () => {
+      unsub?.();
+      unsub = null;
+    };
+  },
+
+  addProduct: async (input) => {
+    const product = await createProduct(input);
+    // snapshot will refresh list
+    return product;
+  },
+
+  updateProduct: async (id, patch) => {
+    await patchProduct(id, patch);
+  },
+
+  deleteProduct: async (id) => {
+    await removeProduct(id);
+  },
+
+  getById: (id) => get().products.find((p) => p.id === id),
+}));
