@@ -3,7 +3,10 @@ export type Product = {
   name: string;
   price: number;
   compareAtPrice?: number;
+  /** Primary image (first of images) */
   image: string;
+  /** Up to 10 gallery images */
+  images?: string[];
   category: string;
   description: string;
   active?: boolean;

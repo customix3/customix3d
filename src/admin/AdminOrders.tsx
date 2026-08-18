@@ -1,22 +1,47 @@
+import { useEffect } from 'react';
 import { useOrders, type OrderStatus } from '@/store/ordersStore';
-import { Cloud } from 'lucide-react';
+import { Cloud, RefreshCw } from 'lucide-react';
 
 const STATUSES: OrderStatus[] = ['Pending', 'Paid', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
 
 export default function AdminOrders() {
-  const { orders, loading, updateStatus } = useOrders();
+  const { orders, loading, error, updateStatus, refresh } = useOrders();
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-bold mb-2">Orders</h1>
-      <p className="text-sm text-slate-500 mb-6 flex items-center gap-1.5">
-        <Cloud className="h-3.5 w-3.5" />
-        {loading ? 'Syncing…' : `${orders.length} orders · Firebase`}
-      </p>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-bold mb-1">Orders</h1>
+          <p className="text-sm text-slate-500 flex items-center gap-1.5">
+            <Cloud className="h-3.5 w-3.5" />
+            {loading ? 'Syncing…' : `${orders.length} orders · Firebase (all devices)`}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => refresh()}
+          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium hover:bg-cream-50"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </button>
+      </div>
 
-      {orders.length === 0 ? (
+      {error && (
+        <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>
+      )}
+
+      {orders.length === 0 && !loading ? (
         <div className="card p-10 text-center text-slate-500">
-          No orders yet. Orders appear here after successful Razorpay checkout on any device.
+          No orders in cloud yet. After a successful payment they appear here automatically.
+          <br />
+          <button type="button" className="mt-3 text-brand-600 font-medium" onClick={() => refresh()}>
+            Force refresh
+          </button>
         </div>
       ) : (
         <div className="card overflow-hidden">
@@ -39,20 +64,22 @@ export default function AdminOrders() {
                       <p className="text-xs text-slate-400">
                         {new Date(o.createdAt).toLocaleString()}
                       </p>
-                      <p className="text-xs text-slate-500 mt-1">
-                        {o.items.map((i) => `${i.name} ×${i.quantity}`).join(', ')}
+                      <p className="mt-1 text-xs text-slate-500">
+                        {o.items?.map((i) => `${i.name} ×${i.quantity}`).join(', ')}
                       </p>
                     </td>
                     <td className="px-4 py-3">
                       <p>{o.customerName}</p>
                       <p className="text-xs text-slate-500">{o.customerEmail}</p>
                       <p className="text-xs text-slate-500">{o.customerWhatsapp}</p>
-                      <p className="text-xs text-slate-400 mt-1">
+                      <p className="mt-1 text-xs text-slate-400">
                         {o.address}, {o.city} {o.pincode}
                       </p>
                     </td>
                     <td className="px-4 py-3 font-medium">₹{o.total}</td>
-                    <td className="px-4 py-3 text-xs text-slate-500">{o.paymentId || '—'}</td>
+                    <td className="px-4 py-3 text-xs text-slate-500 break-all max-w-[140px]">
+                      {o.paymentId || '—'}
+                    </td>
                     <td className="px-4 py-3">
                       <select
                         className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm"

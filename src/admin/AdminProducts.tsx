@@ -1,14 +1,17 @@
-import { useState } from 'react';
-import { Plus, Pencil, Trash2, X, Cloud, AlertTriangle } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Plus, Pencil, Trash2, X, Cloud, AlertTriangle, Upload, Link2 } from 'lucide-react';
 import { useProducts } from '@/store/productsStore';
 import { CATEGORIES } from '@/data/demoProducts';
 import type { Product } from '@/types/product';
+import { uploadProductImage } from '@/services/uploadImage';
+
+const MAX_IMAGES = 10;
 
 const emptyForm = {
   name: '',
   price: '',
   compareAtPrice: '',
-  image: '',
+  images: [] as string[],
   category: 'home-decor',
   description: '',
   active: true,
@@ -19,29 +22,74 @@ export default function AdminProducts() {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [form, setForm] = useState(emptyForm);
+  const [urlInput, setUrlInput] = useState('');
   const [formError, setFormError] = useState('');
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const openAdd = () => {
     setEditingId(null);
     setForm(emptyForm);
+    setUrlInput('');
     setFormError('');
     setOpen(true);
   };
 
   const openEdit = (p: Product) => {
     setEditingId(p.id);
+    const imgs = (p.images?.length ? p.images : p.image ? [p.image] : []).slice(0, MAX_IMAGES);
     setForm({
       name: p.name,
       price: String(p.price),
       compareAtPrice: p.compareAtPrice ? String(p.compareAtPrice) : '',
-      image: p.image,
+      images: imgs,
       category: p.category,
       description: p.description || '',
       active: p.active !== false,
     });
+    setUrlInput('');
     setFormError('');
     setOpen(true);
+  };
+
+  const addUrl = () => {
+    const u = urlInput.trim();
+    if (!u) return;
+    if (form.images.length >= MAX_IMAGES) {
+      setFormError(`Max ${MAX_IMAGES} images`);
+      return;
+    }
+    setForm((f) => ({ ...f, images: [...f.images, u] }));
+    setUrlInput('');
+  };
+
+  const onFiles = async (files: FileList | null) => {
+    if (!files?.length) return;
+    const room = MAX_IMAGES - form.images.length;
+    if (room <= 0) {
+      setFormError(`Max ${MAX_IMAGES} images`);
+      return;
+    }
+    setUploading(true);
+    setFormError('');
+    try {
+      const list = Array.from(files).slice(0, room);
+      const urls: string[] = [];
+      for (const file of list) {
+        urls.push(await uploadProductImage(file));
+      }
+      setForm((f) => ({ ...f, images: [...f.images, ...urls].slice(0, MAX_IMAGES) }));
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  const removeImage = (idx: number) => {
+    setForm((f) => ({ ...f, images: f.images.filter((_, i) => i !== idx) }));
   };
 
   const save = async (e: React.FormEvent) => {
@@ -52,30 +100,31 @@ export default function AdminProducts() {
       setFormError('Name and valid price required');
       return;
     }
+    if (!form.images.length) {
+      setFormError('Add at least 1 image (upload or link)');
+      return;
+    }
+    const images = form.images.slice(0, MAX_IMAGES);
     const payload = {
       name: form.name.trim(),
       price,
       compareAtPrice: form.compareAtPrice ? Number(form.compareAtPrice) : undefined,
-      image:
-        form.image.trim() ||
-        'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=800&q=80',
+      image: images[0],
+      images,
       category: form.category,
       description: form.description.trim() || form.name.trim(),
       active: form.active,
     };
     setSaving(true);
     try {
-      if (editingId) {
-        await updateProduct(editingId, payload);
-      } else {
-        await addProduct(payload);
-      }
+      if (editingId) await updateProduct(editingId, payload);
+      else await addProduct(payload);
       setOpen(false);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Save failed';
       setFormError(
         msg.includes('permission') || msg.includes('Permission')
-          ? 'Permission denied. Publish Firestore rules (see FIRESTORE_SETUP.md).'
+          ? 'Permission denied. Publish Firestore rules.'
           : msg
       );
     } finally {
@@ -84,7 +133,7 @@ export default function AdminProducts() {
   };
 
   const remove = async (id: string, name: string) => {
-    if (!confirm(`Delete "${name}"? This is permanent on all devices.`)) return;
+    if (!confirm(`Delete "${name}"?`)) return;
     try {
       await deleteProduct(id);
     } catch (err) {
@@ -94,18 +143,18 @@ export default function AdminProducts() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-bold">Products</h1>
-          <p className="text-sm text-slate-500 mt-1 flex items-center gap-1.5">
+          <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-500">
             <Cloud className="h-3.5 w-3.5" />
-            {loading ? 'Syncing…' : `${products.length} products · synced via Firebase`}
+            {loading ? 'Syncing…' : `${products.length} products · Firebase`}
           </p>
         </div>
         <button
           type="button"
           onClick={openAdd}
-          className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
+          className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white"
         >
           <Plus className="h-4 w-4" /> Add product
         </button>
@@ -114,13 +163,7 @@ export default function AdminProducts() {
       {error && (
         <div className="mb-4 flex gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           <AlertTriangle className="h-5 w-5 shrink-0" />
-          <div>
-            <p className="font-medium">Cloud sync issue</p>
-            <p className="mt-0.5">{error}</p>
-            <p className="mt-1 text-xs">
-              Open Firebase Console → Firestore → Rules → paste from FIRESTORE_SETUP.md → Publish
-            </p>
-          </div>
+          <p>{error}</p>
         </div>
       )}
 
@@ -132,7 +175,7 @@ export default function AdminProducts() {
                 <th className="px-4 py-3 font-medium">Product</th>
                 <th className="px-4 py-3 font-medium">Category</th>
                 <th className="px-4 py-3 font-medium">Price</th>
-                <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium">Imgs</th>
                 <th className="px-4 py-3 font-medium text-right">Actions</th>
               </tr>
             </thead>
@@ -150,48 +193,24 @@ export default function AdminProducts() {
                     </div>
                   </td>
                   <td className="px-4 py-3 text-slate-500">{p.category}</td>
-                  <td className="px-4 py-3">
-                    ₹{p.price}
-                    {p.compareAtPrice ? (
-                      <span className="ml-2 text-xs text-slate-400 line-through">₹{p.compareAtPrice}</span>
-                    ) : null}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                        p.active !== false ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'
-                      }`}
-                    >
-                      {p.active !== false ? 'Active' : 'Hidden'}
-                    </span>
+                  <td className="px-4 py-3">₹{p.price}</td>
+                  <td className="px-4 py-3 text-slate-500">
+                    {p.images?.length || (p.image ? 1 : 0)}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => openEdit(p)}
-                      className="inline-flex p-2 rounded-lg hover:bg-cream-100 text-slate-600"
-                      title="Edit"
-                    >
+                    <button type="button" onClick={() => openEdit(p)} className="p-2 hover:bg-cream-100 rounded-lg">
                       <Pencil className="h-4 w-4" />
                     </button>
                     <button
                       type="button"
                       onClick={() => remove(p.id, p.name)}
-                      className="inline-flex p-2 rounded-lg hover:bg-red-50 text-red-600"
-                      title="Delete"
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </td>
                 </tr>
               ))}
-              {!loading && products.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-slate-500">
-                    No products. Click Add product.
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
@@ -199,21 +218,21 @@ export default function AdminProducts() {
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-              <h2 className="font-semibold text-lg">{editingId ? 'Edit product' : 'Add product'}</h2>
-              <button type="button" onClick={() => setOpen(false)} className="p-1 rounded-lg hover:bg-slate-100">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b px-5 py-4">
+              <h2 className="text-lg font-semibold">{editingId ? 'Edit product' : 'Add product'}</h2>
+              <button type="button" onClick={() => setOpen(false)} className="rounded-lg p-1 hover:bg-slate-100">
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <form onSubmit={save} className="p-5 space-y-4">
+            <form onSubmit={save} className="space-y-4 p-5">
               {formError && (
                 <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{formError}</p>
               )}
               <div>
                 <label className="text-sm font-medium">Name *</label>
                 <input
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
+                  className="mt-1 w-full rounded-xl border px-3 py-2.5 text-sm"
                   required
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -225,18 +244,18 @@ export default function AdminProducts() {
                   <input
                     type="number"
                     min={1}
-                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
+                    className="mt-1 w-full rounded-xl border px-3 py-2.5 text-sm"
                     required
                     value={form.price}
                     onChange={(e) => setForm({ ...form, price: e.target.value })}
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium">Compare at (₹)</label>
+                  <label className="text-sm font-medium">Compare at</label>
                   <input
                     type="number"
                     min={0}
-                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
+                    className="mt-1 w-full rounded-xl border px-3 py-2.5 text-sm"
                     value={form.compareAtPrice}
                     onChange={(e) => setForm({ ...form, compareAtPrice: e.target.value })}
                   />
@@ -245,7 +264,7 @@ export default function AdminProducts() {
               <div>
                 <label className="text-sm font-medium">Category</label>
                 <select
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
+                  className="mt-1 w-full rounded-xl border px-3 py-2.5 text-sm"
                   value={form.category}
                   onChange={(e) => setForm({ ...form, category: e.target.value })}
                 >
@@ -256,19 +275,77 @@ export default function AdminProducts() {
                   ))}
                 </select>
               </div>
+
+              {/* Images */}
               <div>
-                <label className="text-sm font-medium">Image URL</label>
-                <input
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-                  placeholder="https://..."
-                  value={form.image}
-                  onChange={(e) => setForm({ ...form, image: e.target.value })}
-                />
+                <label className="text-sm font-medium">
+                  Images * <span className="font-normal text-slate-400">({form.images.length}/{MAX_IMAGES})</span>
+                </label>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {form.images.map((src, i) => (
+                    <div key={i} className="relative h-16 w-16 overflow-hidden rounded-lg border bg-cream-50">
+                      <img src={src} alt="" className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(i)}
+                        className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-0.5 text-white"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                      {i === 0 && (
+                        <span className="absolute bottom-0 left-0 right-0 bg-black/50 text-center text-[9px] text-white">
+                          main
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {form.images.length < MAX_IMAGES && (
+                  <div className="mt-3 space-y-2">
+                    <input
+                      ref={fileRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => void onFiles(e.target.files)}
+                    />
+                    <button
+                      type="button"
+                      disabled={uploading}
+                      onClick={() => fileRef.current?.click()}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 py-3 text-sm font-medium hover:bg-cream-50 disabled:opacity-60"
+                    >
+                      <Upload className="h-4 w-4" />
+                      {uploading ? 'Uploading…' : 'Upload from device'}
+                    </button>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Link2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                        <input
+                          className="w-full rounded-xl border py-2.5 pl-9 pr-3 text-sm"
+                          placeholder="Or paste image URL"
+                          value={urlInput}
+                          onChange={(e) => setUrlInput(e.target.value)}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={addUrl}
+                        className="rounded-xl bg-slate-100 px-4 text-sm font-medium"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
+
               <div>
                 <label className="text-sm font-medium">Description</label>
                 <textarea
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm min-h-[80px]"
+                  className="mt-1 min-h-[80px] w-full rounded-xl border px-3 py-2.5 text-sm"
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                 />
@@ -279,22 +356,22 @@ export default function AdminProducts() {
                   checked={form.active}
                   onChange={(e) => setForm({ ...form, active: e.target.checked })}
                 />
-                Active (visible on store)
+                Active on store
               </label>
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="flex-1 rounded-full border border-slate-200 py-2.5 text-sm font-medium"
+                  className="flex-1 rounded-full border py-2.5 text-sm font-medium"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={saving}
+                  disabled={saving || uploading}
                   className="flex-1 rounded-full bg-slate-900 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
                 >
-                  {saving ? 'Saving…' : editingId ? 'Save changes' : 'Add product'}
+                  {saving ? 'Saving…' : editingId ? 'Save' : 'Add product'}
                 </button>
               </div>
             </form>

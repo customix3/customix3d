@@ -17,8 +17,7 @@ import { DEMO_PRODUCTS } from '@/data/demoProducts';
 const PRODUCTS = 'products';
 const ORDERS = 'orders';
 
-/** Firestore rejects undefined — strip it recursively */
-function clean<T extends Record<string, unknown>>(obj: T): Record<string, unknown> {
+function clean(obj: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(obj)) {
     if (v === undefined) continue;
@@ -50,12 +49,19 @@ export function ordersRef() {
 }
 
 function mapProduct(id: string, data: Record<string, unknown>): Product {
+  const images = Array.isArray(data.images)
+    ? (data.images as string[]).filter(Boolean).slice(0, 10)
+    : data.image
+      ? [String(data.image)]
+      : [];
+  const image = images[0] || String(data.image || '');
   return {
     id,
     name: String(data.name || ''),
     price: Number(data.price) || 0,
     compareAtPrice: data.compareAtPrice != null ? Number(data.compareAtPrice) : undefined,
-    image: String(data.image || ''),
+    image,
+    images,
     category: String(data.category || 'home-decor'),
     description: String(data.description || ''),
     active: data.active !== false,
@@ -72,6 +78,7 @@ export async function seedProductsIfEmpty(): Promise<void> {
         doc(db!, PRODUCTS, p.id),
         clean({
           ...p,
+          images: [p.image],
           active: true,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
@@ -83,20 +90,21 @@ export async function seedProductsIfEmpty(): Promise<void> {
 
 export function subscribeProducts(onData: (list: Product[]) => void, onError?: (e: Error) => void) {
   if (!db) {
-    onData(DEMO_PRODUCTS.map((p) => ({ ...p, active: true })));
+    onData(DEMO_PRODUCTS.map((p) => ({ ...p, images: [p.image], active: true })));
     return () => {};
   }
-  const q = query(productsRef(), orderBy('name'));
+  // No orderBy required — avoids missing-index failures
   return onSnapshot(
-    q,
+    productsRef(),
     (snap) => {
       const list = snap.docs.map((d) => mapProduct(d.id, d.data() as Record<string, unknown>));
+      list.sort((a, b) => a.name.localeCompare(b.name));
       onData(list);
     },
     (err) => {
       console.error('products subscribe', err);
       onError?.(err);
-      onData(DEMO_PRODUCTS.map((p) => ({ ...p, active: true })));
+      onData(DEMO_PRODUCTS.map((p) => ({ ...p, images: [p.image], active: true })));
     }
   );
 }
@@ -104,13 +112,16 @@ export function subscribeProducts(onData: (list: Product[]) => void, onError?: (
 export async function createProduct(input: Omit<Product, 'id'>): Promise<Product> {
   if (!db) throw new Error('Firestore not configured');
   const id = 'p_' + Date.now().toString(36);
+  const images = (input.images?.length ? input.images : input.image ? [input.image] : []).slice(0, 10);
+  const image = images[0] || input.image || '';
   await setDoc(
     doc(db, PRODUCTS, id),
     clean({
       name: input.name,
       price: input.price,
       compareAtPrice: input.compareAtPrice ?? null,
-      image: input.image,
+      image,
+      images,
       category: input.category,
       description: input.description,
       active: input.active !== false,
@@ -118,7 +129,7 @@ export async function createProduct(input: Omit<Product, 'id'>): Promise<Product
       updatedAt: serverTimestamp(),
     })
   );
-  return { ...input, id, active: input.active !== false };
+  return { ...input, id, image, images, active: input.active !== false };
 }
 
 export async function patchProduct(id: string, patch: Partial<Product>): Promise<void> {
@@ -127,7 +138,13 @@ export async function patchProduct(id: string, patch: Partial<Product>): Promise
   if (patch.name !== undefined) data.name = patch.name;
   if (patch.price !== undefined) data.price = patch.price;
   if (patch.compareAtPrice !== undefined) data.compareAtPrice = patch.compareAtPrice ?? null;
-  if (patch.image !== undefined) data.image = patch.image;
+  if (patch.images !== undefined) {
+    const images = patch.images.filter(Boolean).slice(0, 10);
+    data.images = images;
+    data.image = images[0] || '';
+  } else if (patch.image !== undefined) {
+    data.image = patch.image;
+  }
   if (patch.category !== undefined) data.category = patch.category;
   if (patch.description !== undefined) data.description = patch.description;
   if (patch.active !== undefined) data.active = patch.active;
