@@ -1,16 +1,18 @@
-import { useMemo, useState } from 'react'
-import ProductCard from '@/components/ProductCard'
-import { DEMO_PRODUCTS } from '@/data/demoProducts'
+import { useMemo, useState } from 'react';
+import ProductCard from '@/components/ProductCard';
+import { useProducts } from '@/store/productsStore';
 
 export default function ProductsPage() {
-  const [q, setQ] = useState('')
+  const all = useProducts((s) => s.products);
+  const [q, setQ] = useState('');
   const products = useMemo(() => {
-    if (!q.trim()) return DEMO_PRODUCTS
-    const s = q.toLowerCase()
-    return DEMO_PRODUCTS.filter(
+    const list = all.filter((p) => p.active !== false);
+    if (!q.trim()) return list;
+    const s = q.toLowerCase();
+    return list.filter(
       (p) => p.name.toLowerCase().includes(s) || p.category.toLowerCase().includes(s)
-    )
-  }, [q])
+    );
+  }, [q, all]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-10">
@@ -28,6 +30,9 @@ export default function ProductsPage() {
           <ProductCard key={p.id} product={p} />
         ))}
       </div>
+      {products.length === 0 && (
+        <p className="text-center text-slate-500 py-16">No products found.</p>
+      )}
     </div>
-  )
+  );
 }

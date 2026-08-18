@@ -1,32 +1,24 @@
-# CustoMix3D — Local Admin
+# CustoMix3D Admin
 
-## Admin login (local, pre-Firebase)
+## Login
+- URL: `/admin/login`
+- Demo: `admin` / `admin123` (localStorage session)
 
-URL: `/admin/login`
+## Products
+- **Add / Edit / Delete** from `/admin/products`
+- Catalog is stored in browser localStorage (`customix3d-products`)
+- Storefront reads the same list (active products only)
 
-```
-Email: admin@customix3d.com
-Password: admin123
-```
+## Orders
+- Appear after successful Razorpay checkout
+- Update status from `/admin/orders`
 
-## Maintenance mode
-
-- Controlled from **Admin → Settings** or the sidebar toggle
-- When ON: store visitors see maintenance page
-- Admin routes always work
-- Production Vercel stays on static maintenance until full React deploy
-
-## Run locally
-
-```bash
-npm install
-npm run dev
-```
-
-Then open http://localhost:5173 and http://localhost:5173/admin/login
+## Razorpay TEST
+- Key ID used in frontend: `rzp_test_TRAqhKGvLnsCHg`
+- **Key secret must never be put in frontend code**
+- Keep secret only for future server-side signature verification / refunds
+- Test cards: https://razorpay.com/docs/payments/payments/test-card-upi-details/
 
 ## Next
-
-- Firebase Auth / Firestore
-- Payment gateway
-- Nimbus Post
+- Nimbus Post courier API
+- Firestore sync for products/orders across devices

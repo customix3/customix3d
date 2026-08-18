@@ -1,33 +1,76 @@
+import { useOrders, type OrderStatus } from '@/store/ordersStore';
+
+const STATUSES: OrderStatus[] = ['Pending', 'Paid', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
+
 export default function AdminOrders() {
-  const orders = [
-    { id: 'ORD-1001', customer: 'Demo User', total: 1299, status: 'Shipped' },
-    { id: 'ORD-1002', customer: 'Demo User', total: 499, status: 'Processing' },
-  ]
+  const { orders, updateStatus } = useOrders();
+
   return (
     <div>
-      <h1 className="font-display text-2xl font-bold mb-6">Orders</h1>
-      <div className="card overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-cream-100 text-left">
-            <tr>
-              <th className="px-4 py-3 font-medium">Order</th>
-              <th className="px-4 py-3 font-medium">Customer</th>
-              <th className="px-4 py-3 font-medium">Total</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.map((o) => (
-              <tr key={o.id} className="border-t border-cream-200">
-                <td className="px-4 py-3 font-medium">{o.id}</td>
-                <td className="px-4 py-3">{o.customer}</td>
-                <td className="px-4 py-3">₹{o.total}</td>
-                <td className="px-4 py-3 text-brand-600">{o.status}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <h1 className="font-display text-2xl font-bold mb-2">Orders</h1>
+      <p className="text-sm text-slate-500 mb-6">{orders.length} orders</p>
+
+      {orders.length === 0 ? (
+        <div className="card p-10 text-center text-slate-500">
+          No orders yet. Orders appear here after successful Razorpay checkout.
+        </div>
+      ) : (
+        <div className="card overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-cream-100 text-left">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Order</th>
+                  <th className="px-4 py-3 font-medium">Customer</th>
+                  <th className="px-4 py-3 font-medium">Total</th>
+                  <th className="px-4 py-3 font-medium">Payment</th>
+                  <th className="px-4 py-3 font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {orders.map((o) => (
+                  <tr key={o.id} className="border-t border-cream-200 align-top">
+                    <td className="px-4 py-3">
+                      <p className="font-medium">{o.id}</p>
+                      <p className="text-xs text-slate-400">
+                        {new Date(o.createdAt).toLocaleString()}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        {o.items.map((i) => `${i.name} ×${i.quantity}`).join(', ')}
+                      </p>
+                    </td>
+                    <td className="px-4 py-3">
+                      <p>{o.customerName}</p>
+                      <p className="text-xs text-slate-500">{o.customerEmail}</p>
+                      <p className="text-xs text-slate-500">{o.customerWhatsapp}</p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        {o.address}, {o.city} {o.pincode}
+                      </p>
+                    </td>
+                    <td className="px-4 py-3 font-medium">₹{o.total}</td>
+                    <td className="px-4 py-3 text-xs text-slate-500">
+                      {o.paymentId || '—'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <select
+                        className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+                        value={o.status}
+                        onChange={(e) => updateStatus(o.id, e.target.value as OrderStatus)}
+                      >
+                        {STATUSES.map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
-  )
+  );
 }

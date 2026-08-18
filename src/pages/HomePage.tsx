@@ -1,10 +1,12 @@
-import { Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
-import ProductCard from '@/components/ProductCard'
-import { CATEGORIES, DEMO_PRODUCTS } from '@/data/demoProducts'
+import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import ProductCard from '@/components/ProductCard';
+import { CATEGORIES } from '@/data/demoProducts';
+import { useProducts } from '@/store/productsStore';
 
 export default function HomePage() {
-  const bestsellers = DEMO_PRODUCTS.slice(0, 4)
+  const products = useProducts((s) => s.products).filter((p) => p.active !== false);
+  const bestsellers = products.slice(0, 4);
 
   return (
     <div>
@@ -89,11 +91,11 @@ export default function HomePage() {
       <section className="max-w-7xl mx-auto px-4 pb-20">
         <h2 className="font-display text-2xl font-bold mb-8">More to explore</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-          {DEMO_PRODUCTS.map((p, i) => (
+          {products.map((p, i) => (
             <ProductCard key={p.id} product={p} index={i} />
           ))}
         </div>
       </section>
     </div>
-  )
+  );
 }

@@ -1,23 +1,26 @@
-import { useParams, Link } from 'react-router-dom'
-import { DEMO_PRODUCTS } from '@/data/demoProducts'
-import { useCart } from '@/context/CartContext'
-import ProductCard from '@/components/ProductCard'
+import { useParams, Link } from 'react-router-dom';
+import { useProducts } from '@/store/productsStore';
+import { useCart } from '@/context/CartContext';
+import ProductCard from '@/components/ProductCard';
 
 export default function ProductDetailPage() {
-  const { id } = useParams()
-  const product = DEMO_PRODUCTS.find((p) => p.id === id)
-  const addItem = useCart((s) => s.addItem)
+  const { id } = useParams();
+  const product = useProducts((s) => s.getById(id || ''));
+  const products = useProducts((s) => s.products);
+  const addItem = useCart((s) => s.addItem);
 
-  if (!product) {
+  if (!product || product.active === false) {
     return (
       <div className="max-w-lg mx-auto py-20 text-center">
         <p>Product not found</p>
         <Link to="/products" className="btn-primary mt-4 inline-flex">Back to shop</Link>
       </div>
-    )
+    );
   }
 
-  const related = DEMO_PRODUCTS.filter((p) => p.category === product.category && p.id !== product.id).slice(0, 4)
+  const related = products
+    .filter((p) => p.category === product.category && p.id !== product.id && p.active !== false)
+    .slice(0, 4);
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-10">
@@ -38,7 +41,9 @@ export default function ProductDetailPage() {
           <button
             type="button"
             className="btn-primary mt-8"
-            onClick={() => addItem({ id: product.id, name: product.name, image: product.image, price: product.price })}
+            onClick={() =>
+              addItem({ id: product.id, name: product.name, image: product.image, price: product.price })
+            }
           >
             Add to cart
           </button>
@@ -55,5 +60,5 @@ export default function ProductDetailPage() {
         </div>
       )}
     </div>
-  )
+  );
 }

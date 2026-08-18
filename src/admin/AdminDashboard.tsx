@@ -1,14 +1,20 @@
-import { Link } from 'react-router-dom'
-import { Package, ShoppingBag, Users, Settings } from 'lucide-react'
+import { Link } from 'react-router-dom';
+import { Package, ShoppingBag, Users, Settings } from 'lucide-react';
+import { useProducts } from '@/store/productsStore';
+import { useOrders } from '@/store/ordersStore';
 
 const cards = [
-  { title: 'Products', href: '/admin/products', icon: Package, desc: 'Manage catalog' },
+  { title: 'Products', href: '/admin/products', icon: Package, desc: 'Add, edit, delete catalog' },
   { title: 'Orders', href: '/admin/orders', icon: ShoppingBag, desc: 'View & update orders' },
   { title: 'Customers', href: '/admin/customers', icon: Users, desc: 'Customer list' },
   { title: 'Settings', href: '/admin/settings', icon: Settings, desc: 'Maintenance & more' },
-]
+];
 
 export default function AdminDashboard() {
+  const products = useProducts((s) => s.products);
+  const orders = useOrders((s) => s.orders);
+  const pending = orders.filter((o) => o.status === 'Paid' || o.status === 'Processing').length;
+
   return (
     <div>
       <h1 className="font-display text-2xl font-bold mb-2">Dashboard</h1>
@@ -23,22 +29,22 @@ export default function AdminDashboard() {
         ))}
       </div>
       <div className="mt-10 card p-6">
-        <h2 className="font-medium mb-2">Quick stats (demo)</h2>
+        <h2 className="font-medium mb-2">Live stats</h2>
         <div className="grid grid-cols-3 gap-4 text-center">
           <div>
-            <p className="text-2xl font-bold">8</p>
+            <p className="text-2xl font-bold">{products.length}</p>
             <p className="text-sm text-ink-500">Products</p>
           </div>
           <div>
-            <p className="text-2xl font-bold">2</p>
+            <p className="text-2xl font-bold">{orders.length}</p>
             <p className="text-sm text-ink-500">Orders</p>
           </div>
           <div>
-            <p className="text-2xl font-bold">0</p>
-            <p className="text-sm text-ink-500">Pending custom</p>
+            <p className="text-2xl font-bold">{pending}</p>
+            <p className="text-sm text-ink-500">In progress</p>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
