@@ -43,6 +43,8 @@ export async function openRazorpayCheckout(input: {
   }
 
   const amountPaise = Math.round(input.amountRupees * 100);
+  // Prefer 10-digit Indian mobile for UPI apps
+  const contact = input.customerPhone.replace(/\D/g, '').slice(-10);
 
   return new Promise((resolve, reject) => {
     const rzp = new window.Razorpay({
@@ -52,23 +54,60 @@ export async function openRazorpayCheckout(input: {
       name: 'CustoMix3D',
       description: input.description || 'Order payment',
       image: '/favicon.svg',
+      // Explicit methods — UPI first for India
+      method: {
+        upi: true,
+        card: true,
+        netbanking: true,
+        wallet: true,
+        emi: false,
+        paylater: true,
+      },
+      config: {
+        display: {
+          blocks: {
+            upi: {
+              name: 'Pay using UPI',
+              instruments: [{ method: 'upi' }],
+            },
+            other: {
+              name: 'Other methods',
+              instruments: [
+                { method: 'card' },
+                { method: 'netbanking' },
+                { method: 'wallet' },
+              ],
+            },
+          },
+          sequence: ['block.upi', 'block.other'],
+          preferences: {
+            show_default_blocks: true,
+          },
+        },
+      },
       prefill: {
         name: input.customerName,
         email: input.customerEmail,
-        contact: input.customerPhone.replace(/\s/g, ''),
+        contact: contact || input.customerPhone.replace(/\s/g, ''),
+        method: 'upi',
       },
-      theme: { color: '#0f172a' },
+      theme: {
+        color: '#0f172a',
+        backdrop_color: 'rgba(0,0,0,0.5)',
+      },
+      remember_customer: true,
       handler: (response: RazorpaySuccess) => {
         resolve(response);
       },
       modal: {
         ondismiss: () => reject(new Error('Payment cancelled')),
+        confirm_close: true,
       },
     });
 
     rzp.on('payment.failed', (resp: unknown) => {
-      reject(new Error('Payment failed'));
       console.error('Razorpay failed', resp);
+      reject(new Error('Payment failed'));
     });
 
     rzp.open();
