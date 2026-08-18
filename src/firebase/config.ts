@@ -3,16 +3,20 @@ import { getAuth, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 import { getStorage, type FirebaseStorage } from 'firebase/storage';
 
+/**
+ * Firebase project: customix3d-123
+ * Prefer VITE_* env vars; hardcoded fallback for local builds.
+ * Security is enforced by Firestore & Storage rules (not by hiding the web API key).
+ */
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || '',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || '',
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyChbLoLojYdk7ypdEcCDUkL2yyTHPsVBCM',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'customix3d-123.firebaseapp.com',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'customix3d-123',
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'customix3d-123.firebasestorage.app',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '369969895183',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:369969895183:web:3c7e147a4027352f06107a',
 };
 
-/** True only when real Firebase env vars are present */
 export const isFirebaseConfigured = Boolean(
   firebaseConfig.apiKey &&
     firebaseConfig.projectId &&
