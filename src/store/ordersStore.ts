@@ -28,7 +28,7 @@ interface OrdersState {
   orders: Order[];
   loading: boolean;
   error: string | null;
-  init: () => () => void;
+  init: () => void;
   refresh: () => void;
   addOrder: (
     o: Omit<Order, 'id' | 'createdAt' | 'status'> & {
@@ -46,7 +46,9 @@ function startSub(set: (p: Partial<OrdersState>) => void) {
   if (unsub) {
     try {
       unsub();
-    } catch {}
+    } catch {
+      /* ignore */
+    }
     unsub = null;
   }
   set({ loading: true, error: null });
@@ -71,20 +73,28 @@ export const useOrders = create<OrdersState>((set, get) => ({
 
   init: () => {
     startSub(set);
-    return () => {
-      // keep live subscription for admin + customer (do not kill on layout remount)
-    };
   },
 
   refresh: () => startSub(set),
 
   addOrder: async (input) => {
-    const order = await createOrderFs({
-      ...input,
+    // Only pass defined optional fields into Firestore layer
+    const data: Parameters<typeof createOrderFs>[0] = {
+      customerName: input.customerName,
+      customerEmail: input.customerEmail,
+      customerWhatsapp: input.customerWhatsapp,
+      address: input.address,
+      city: input.city,
+      pincode: input.pincode,
+      items: input.items,
+      total: input.total,
       status: input.status || 'Paid',
-    });
+    };
+    if (input.paymentId) data.paymentId = input.paymentId;
+    if (input.razorpayOrderId) data.razorpayOrderId = input.razorpayOrderId;
+
+    const order = await createOrderFs(data);
     const mapped: Order = { ...order, status: (order.status as OrderStatus) || 'Paid' };
-    // Optimistic: show immediately in admin + customer before snapshot
     const exists = get().orders.some((o) => o.id === mapped.id);
     if (!exists) {
       set({ orders: [mapped, ...get().orders] });

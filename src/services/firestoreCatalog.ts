@@ -6,8 +6,6 @@ import {
   updateDoc,
   deleteDoc,
   onSnapshot,
-  orderBy,
-  query,
   serverTimestamp,
 } from 'firebase/firestore';
 import { db } from '@/firebase/config';
@@ -17,20 +15,27 @@ import { DEMO_PRODUCTS } from '@/data/demoProducts';
 const PRODUCTS = 'products';
 const ORDERS = 'orders';
 
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  if (v === null || typeof v !== 'object' || Array.isArray(v)) return false;
+  // Firestore FieldValue / Timestamp sentinels — do not recurse
+  if ('_methodName' in (v as object)) return false;
+  if (typeof (v as { toDate?: unknown }).toDate === 'function') return false;
+  return Object.getPrototypeOf(v) === Object.prototype || Object.getPrototypeOf(v) === null;
+}
+
+/** Strip undefined (Firestore rejects it). Keep null, FieldValue, arrays. */
 function clean(obj: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(obj)) {
     if (v === undefined) continue;
-    if (v !== null && typeof v === 'object' && !Array.isArray(v) && !(v instanceof Date)) {
-      out[k] = clean(v as Record<string, unknown>);
+    if (isPlainObject(v)) {
+      out[k] = clean(v);
     } else if (Array.isArray(v)) {
-      out[k] = v.map((item) =>
-        item !== null && typeof item === 'object'
-          ? clean(item as Record<string, unknown>)
-          : item === undefined
-            ? null
-            : item
-      );
+      out[k] = v.map((item) => {
+        if (item === undefined) return null;
+        if (isPlainObject(item)) return clean(item);
+        return item;
+      });
     } else {
       out[k] = v;
     }
@@ -77,8 +82,13 @@ export async function seedProductsIfEmpty(): Promise<void> {
       setDoc(
         doc(db!, PRODUCTS, p.id),
         clean({
-          ...p,
+          name: p.name,
+          price: p.price,
+          compareAtPrice: p.compareAtPrice ?? null,
+          image: p.image,
           images: [p.image],
+          category: p.category,
+          description: p.description,
           active: true,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
@@ -93,7 +103,6 @@ export function subscribeProducts(onData: (list: Product[]) => void, onError?: (
     onData(DEMO_PRODUCTS.map((p) => ({ ...p, images: [p.image], active: true })));
     return () => {};
   }
-  // No orderBy required — avoids missing-index failures
   return onSnapshot(
     productsRef(),
     (snap) => {
@@ -197,8 +206,8 @@ export function subscribeOrders(onData: (list: FsOrder[]) => void, onError?: (e:
           items: data.items || [],
           total: Number(data.total) || 0,
           status: data.status || 'Paid',
-          paymentId: data.paymentId || undefined,
-          razorpayOrderId: data.razorpayOrderId || undefined,
+          paymentId: data.paymentId ? String(data.paymentId) : undefined,
+          razorpayOrderId: data.razorpayOrderId ? String(data.razorpayOrderId) : undefined,
         };
       });
       list.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
@@ -218,35 +227,54 @@ export async function createOrderFs(
   if (!db) throw new Error('Firestore not configured');
   const id = 'ORD-' + Date.now().toString(36).toUpperCase();
   const createdAtIso = new Date().toISOString();
-  const payload = clean({
-    customerName: input.customerName,
-    customerEmail: input.customerEmail,
-    customerWhatsapp: input.customerWhatsapp,
-    address: input.address,
-    city: input.city,
-    pincode: input.pincode,
-    items: input.items.map((i) =>
-      clean({
-        id: i.id,
-        name: i.name,
-        price: i.price,
-        quantity: i.quantity,
-        image: i.image ?? null,
-      })
-    ),
-    total: input.total,
-    status: input.status || 'Paid',
-    paymentId: input.paymentId ?? null,
-    razorpayOrderId: input.razorpayOrderId ?? null,
+
+  // Build payload field-by-field — NEVER put undefined in Firestore
+  const payload: Record<string, unknown> = {
+    customerName: String(input.customerName || ''),
+    customerEmail: String(input.customerEmail || ''),
+    customerWhatsapp: String(input.customerWhatsapp || ''),
+    address: String(input.address || ''),
+    city: String(input.city || ''),
+    pincode: String(input.pincode || ''),
+    items: (input.items || []).map((i) => {
+      const row: Record<string, unknown> = {
+        id: String(i.id || ''),
+        name: String(i.name || ''),
+        price: Number(i.price) || 0,
+        quantity: Number(i.quantity) || 1,
+      };
+      if (i.image) row.image = String(i.image);
+      return row;
+    }),
+    total: Number(input.total) || 0,
+    status: String(input.status || 'Paid'),
     createdAt: serverTimestamp(),
     createdAtIso,
-  });
+  };
+
+  if (input.paymentId && String(input.paymentId).trim()) {
+    payload.paymentId = String(input.paymentId);
+  }
+  if (input.razorpayOrderId && String(input.razorpayOrderId).trim()) {
+    payload.razorpayOrderId = String(input.razorpayOrderId);
+  }
+
   await setDoc(doc(db, ORDERS, id), payload);
+
   return {
-    ...input,
     id,
     createdAt: createdAtIso,
-    status: input.status || 'Paid',
+    customerName: String(input.customerName || ''),
+    customerEmail: String(input.customerEmail || ''),
+    customerWhatsapp: String(input.customerWhatsapp || ''),
+    address: String(input.address || ''),
+    city: String(input.city || ''),
+    pincode: String(input.pincode || ''),
+    items: input.items || [],
+    total: Number(input.total) || 0,
+    status: String(input.status || 'Paid'),
+    paymentId: input.paymentId ? String(input.paymentId) : undefined,
+    razorpayOrderId: input.razorpayOrderId ? String(input.razorpayOrderId) : undefined,
   };
 }
 

@@ -40,7 +40,6 @@ export default function CheckoutPage() {
     }));
   }, [user]);
 
-  // After success animation, go to order tracking
   useEffect(() => {
     if (!done || !orderId) return;
     const t = setTimeout(() => {
@@ -85,17 +84,11 @@ export default function CheckoutPage() {
         >
           🎉
         </motion.div>
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-        >
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
           <h1 className="font-display text-2xl font-bold sm:text-3xl mb-2">Payment done!</h1>
           <p className="text-lg text-slate-600 mb-1">Order placed successfully</p>
           <p className="font-mono text-sm font-semibold text-brand-600 mb-2">{orderId}</p>
-          {paymentId && (
-            <p className="text-xs text-slate-400 mb-4">Payment: {paymentId}</p>
-          )}
+          {paymentId && <p className="text-xs text-slate-400 mb-4">Payment: {paymentId}</p>}
           <div className="flex justify-center gap-1 text-2xl mb-6" aria-hidden>
             {['🍌', '✨', '🥳', '✨', '🍌'].map((e, i) => (
               <motion.span
@@ -137,7 +130,10 @@ export default function CheckoutPage() {
         description: `CustoMix3D order · ${items.length} item(s)`,
       });
 
-      const order = await addOrder({
+      const payId = payment.razorpay_payment_id ? String(payment.razorpay_payment_id) : '';
+      const rzpOrder = payment.razorpay_order_id ? String(payment.razorpay_order_id) : '';
+
+      const orderPayload: Parameters<typeof addOrder>[0] = {
         customerName: form.name,
         customerEmail: form.email,
         customerWhatsapp: form.whatsapp,
@@ -149,24 +145,24 @@ export default function CheckoutPage() {
           name: i.name,
           price: i.price,
           quantity: i.quantity,
-          image: i.image,
+          ...(i.image ? { image: i.image } : {}),
         })),
         total: amount,
         status: 'Paid',
-        paymentId: payment.razorpay_payment_id || undefined,
-        razorpayOrderId: payment.razorpay_order_id || undefined,
-      });
+      };
+      if (payId) orderPayload.paymentId = payId;
+      if (rzpOrder) orderPayload.razorpayOrderId = rzpOrder;
+
+      const order = await addOrder(orderPayload);
 
       clear();
       setOrderId(order.id);
-      setPaymentId(payment.razorpay_payment_id || '');
+      setPaymentId(payId);
       setDone(true);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Payment failed';
       if (msg.includes('permission') || msg.includes('Permission')) {
         setError('Order save failed (Firestore rules). Publish open rules in Firebase.');
-      } else if (msg.includes('invalid data') || msg.includes('Unsupported field')) {
-        setError('Order save fixed — please try Pay again.');
       } else if (msg !== 'Payment cancelled') {
         setError(msg);
       }
