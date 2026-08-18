@@ -3,11 +3,6 @@ import { getAuth, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 import { getStorage, type FirebaseStorage } from 'firebase/storage';
 
-/**
- * Firebase project: customix3d-123
- * Prefer VITE_* env vars; hardcoded fallback for local builds.
- * Security is enforced by Firestore & Storage rules (not by hiding the web API key).
- */
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyChbLoLojYdk7ypdEcCDUkL2yyTHPsVBCM',
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'customix3d-123.firebaseapp.com',
