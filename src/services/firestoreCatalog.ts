@@ -17,6 +17,28 @@ import { DEMO_PRODUCTS } from '@/data/demoProducts';
 const PRODUCTS = 'products';
 const ORDERS = 'orders';
 
+/** Firestore rejects undefined — strip it recursively */
+function clean<T extends Record<string, unknown>>(obj: T): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v === undefined) continue;
+    if (v !== null && typeof v === 'object' && !Array.isArray(v) && !(v instanceof Date)) {
+      out[k] = clean(v as Record<string, unknown>);
+    } else if (Array.isArray(v)) {
+      out[k] = v.map((item) =>
+        item !== null && typeof item === 'object'
+          ? clean(item as Record<string, unknown>)
+          : item === undefined
+            ? null
+            : item
+      );
+    } else {
+      out[k] = v;
+    }
+  }
+  return out;
+}
+
 export function productsRef() {
   if (!db) throw new Error('Firestore not configured');
   return collection(db, PRODUCTS);
@@ -40,19 +62,21 @@ function mapProduct(id: string, data: Record<string, unknown>): Product {
   };
 }
 
-/** One-time seed if collection empty */
 export async function seedProductsIfEmpty(): Promise<void> {
   if (!db) return;
   const snap = await getDocs(productsRef());
   if (!snap.empty) return;
   await Promise.all(
     DEMO_PRODUCTS.map((p) =>
-      setDoc(doc(db!, PRODUCTS, p.id), {
-        ...p,
-        active: true,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      })
+      setDoc(
+        doc(db!, PRODUCTS, p.id),
+        clean({
+          ...p,
+          active: true,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        })
+      )
     )
   );
 }
@@ -80,18 +104,20 @@ export function subscribeProducts(onData: (list: Product[]) => void, onError?: (
 export async function createProduct(input: Omit<Product, 'id'>): Promise<Product> {
   if (!db) throw new Error('Firestore not configured');
   const id = 'p_' + Date.now().toString(36);
-  const data = {
-    name: input.name,
-    price: input.price,
-    compareAtPrice: input.compareAtPrice ?? null,
-    image: input.image,
-    category: input.category,
-    description: input.description,
-    active: input.active !== false,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  };
-  await setDoc(doc(db, PRODUCTS, id), data);
+  await setDoc(
+    doc(db, PRODUCTS, id),
+    clean({
+      name: input.name,
+      price: input.price,
+      compareAtPrice: input.compareAtPrice ?? null,
+      image: input.image,
+      category: input.category,
+      description: input.description,
+      active: input.active !== false,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    })
+  );
   return { ...input, id, active: input.active !== false };
 }
 
@@ -112,8 +138,6 @@ export async function removeProduct(id: string): Promise<void> {
   if (!db) throw new Error('Firestore not configured');
   await deleteDoc(doc(db, PRODUCTS, id));
 }
-
-// ——— Orders ———
 
 export type FsOrder = {
   id: string;
@@ -143,7 +167,10 @@ export function subscribeOrders(onData: (list: FsOrder[]) => void, onError?: (e:
         const data = d.data();
         return {
           id: d.id,
-          createdAt: data.createdAt?.toDate?.()?.toISOString?.() || data.createdAtIso || new Date().toISOString(),
+          createdAt:
+            data.createdAt?.toDate?.()?.toISOString?.() ||
+            data.createdAtIso ||
+            new Date().toISOString(),
           customerName: data.customerName || '',
           customerEmail: data.customerEmail || '',
           customerWhatsapp: data.customerWhatsapp || '',
@@ -153,8 +180,8 @@ export function subscribeOrders(onData: (list: FsOrder[]) => void, onError?: (e:
           items: data.items || [],
           total: Number(data.total) || 0,
           status: data.status || 'Paid',
-          paymentId: data.paymentId,
-          razorpayOrderId: data.razorpayOrderId,
+          paymentId: data.paymentId || undefined,
+          razorpayOrderId: data.razorpayOrderId || undefined,
         };
       });
       list.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
@@ -168,17 +195,42 @@ export function subscribeOrders(onData: (list: FsOrder[]) => void, onError?: (e:
   );
 }
 
-export async function createOrderFs(input: Omit<FsOrder, 'id' | 'createdAt'> & { status?: string }): Promise<FsOrder> {
+export async function createOrderFs(
+  input: Omit<FsOrder, 'id' | 'createdAt'> & { status?: string }
+): Promise<FsOrder> {
   if (!db) throw new Error('Firestore not configured');
   const id = 'ORD-' + Date.now().toString(36).toUpperCase();
   const createdAtIso = new Date().toISOString();
-  await setDoc(doc(db, ORDERS, id), {
-    ...input,
+  const payload = clean({
+    customerName: input.customerName,
+    customerEmail: input.customerEmail,
+    customerWhatsapp: input.customerWhatsapp,
+    address: input.address,
+    city: input.city,
+    pincode: input.pincode,
+    items: input.items.map((i) =>
+      clean({
+        id: i.id,
+        name: i.name,
+        price: i.price,
+        quantity: i.quantity,
+        image: i.image ?? null,
+      })
+    ),
+    total: input.total,
     status: input.status || 'Paid',
+    paymentId: input.paymentId ?? null,
+    razorpayOrderId: input.razorpayOrderId ?? null,
     createdAt: serverTimestamp(),
     createdAtIso,
   });
-  return { ...input, id, createdAt: createdAtIso, status: input.status || 'Paid' };
+  await setDoc(doc(db, ORDERS, id), payload);
+  return {
+    ...input,
+    id,
+    createdAt: createdAtIso,
+    status: input.status || 'Paid',
+  };
 }
 
 export async function patchOrderStatus(id: string, status: string): Promise<void> {

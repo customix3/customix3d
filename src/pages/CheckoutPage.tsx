@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { openRazorpayCheckout } from '@/services/paymentService';
@@ -39,6 +40,15 @@ export default function CheckoutPage() {
     }));
   }, [user]);
 
+  // After success animation, go to order tracking
+  useEffect(() => {
+    if (!done || !orderId) return;
+    const t = setTimeout(() => {
+      navigate(`/orders/${orderId}`, { replace: true });
+    }, 3200);
+    return () => clearTimeout(t);
+  }, [done, orderId, navigate]);
+
   const amount = typeof total === 'function' ? total() : 0;
 
   if (authLoading || !user) {
@@ -65,19 +75,47 @@ export default function CheckoutPage() {
 
   if (done) {
     return (
-      <div className="mx-auto max-w-md px-4 py-20 text-center">
-        <h1 className="font-display text-2xl font-bold mb-3">Payment successful 🎉</h1>
-        <p className="text-slate-600 mb-2">
-          Order <strong>{orderId}</strong>
-        </p>
-        {paymentId && <p className="text-xs text-slate-400 mb-6">Payment ID: {paymentId}</p>}
-        <p className="text-slate-600 mb-6">Saved to cloud · visible on all admin devices.</p>
-        <Link
-          to="/orders"
-          className="inline-block rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white"
+      <div className="mx-auto flex min-h-[70vh] max-w-md flex-col items-center justify-center px-4 py-16 text-center">
+        <motion.div
+          initial={{ scale: 0, rotate: -20 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ type: 'spring', stiffness: 200, damping: 12 }}
+          className="mb-6 text-7xl sm:text-8xl"
+          aria-hidden
         >
-          View orders
-        </Link>
+          🎉
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+        >
+          <h1 className="font-display text-2xl font-bold sm:text-3xl mb-2">Payment done!</h1>
+          <p className="text-lg text-slate-600 mb-1">Order placed successfully</p>
+          <p className="font-mono text-sm font-semibold text-brand-600 mb-2">{orderId}</p>
+          {paymentId && (
+            <p className="text-xs text-slate-400 mb-4">Payment: {paymentId}</p>
+          )}
+          <div className="flex justify-center gap-1 text-2xl mb-6" aria-hidden>
+            {['🍌', '✨', '🥳', '✨', '🍌'].map((e, i) => (
+              <motion.span
+                key={i}
+                initial={{ y: 0 }}
+                animate={{ y: [0, -10, 0] }}
+                transition={{ delay: 0.4 + i * 0.12, repeat: 2, duration: 0.5 }}
+              >
+                {e}
+              </motion.span>
+            ))}
+          </div>
+          <p className="text-sm text-slate-500 mb-6">Taking you to order tracking…</p>
+          <Link
+            to={`/orders/${orderId}`}
+            className="inline-block rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white"
+          >
+            View tracking now
+          </Link>
+        </motion.div>
       </div>
     );
   }
@@ -115,18 +153,20 @@ export default function CheckoutPage() {
         })),
         total: amount,
         status: 'Paid',
-        paymentId: payment.razorpay_payment_id,
-        razorpayOrderId: payment.razorpay_order_id,
+        paymentId: payment.razorpay_payment_id || undefined,
+        razorpayOrderId: payment.razorpay_order_id || undefined,
       });
 
       clear();
       setOrderId(order.id);
-      setPaymentId(payment.razorpay_payment_id);
+      setPaymentId(payment.razorpay_payment_id || '');
       setDone(true);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Payment failed';
       if (msg.includes('permission') || msg.includes('Permission')) {
-        setError('Order save failed (Firestore rules). Publish rules from FIRESTORE_SETUP.md');
+        setError('Order save failed (Firestore rules). Publish open rules in Firebase.');
+      } else if (msg.includes('invalid data') || msg.includes('Unsupported field')) {
+        setError('Order save fixed — please try Pay again.');
       } else if (msg !== 'Payment cancelled') {
         setError(msg);
       }
@@ -229,34 +269,25 @@ export default function CheckoutPage() {
                 </li>
               ))}
             </ul>
-            <div className="mt-4 border-t border-slate-100 pt-4 flex justify-between font-semibold text-lg">
+            <div className="mt-4 flex justify-between border-t border-slate-100 pt-4 text-lg font-semibold">
               <span>Total</span>
               <span>₹{amount}</span>
             </div>
 
-            {/* Payment methods hint */}
             <div className="mt-4 rounded-xl bg-slate-50 p-3">
-              <p className="text-xs font-semibold text-slate-700 mb-2">Pay with</p>
+              <p className="mb-2 text-xs font-semibold text-slate-700">Pay with</p>
               <div className="flex flex-wrap gap-2">
-                <span className="rounded-full bg-white border border-slate-200 px-2.5 py-1 text-[11px] font-medium text-slate-700">
-                  UPI
-                </span>
-                <span className="rounded-full bg-white border border-slate-200 px-2.5 py-1 text-[11px] font-medium text-slate-700">
-                  GPay / PhonePe
-                </span>
-                <span className="rounded-full bg-white border border-slate-200 px-2.5 py-1 text-[11px] font-medium text-slate-700">
-                  Cards
-                </span>
-                <span className="rounded-full bg-white border border-slate-200 px-2.5 py-1 text-[11px] font-medium text-slate-700">
-                  Netbanking
-                </span>
-                <span className="rounded-full bg-white border border-slate-200 px-2.5 py-1 text-[11px] font-medium text-slate-700">
-                  Wallets
-                </span>
+                {['UPI', 'GPay / PhonePe', 'Cards', 'Netbanking', 'Wallets'].map((m) => (
+                  <span
+                    key={m}
+                    className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700"
+                  >
+                    {m}
+                  </span>
+                ))}
               </div>
               <p className="mt-2 text-[11px] text-amber-700">
-                TEST mode: UPI shows in Razorpay popup. Use test UPI ID{' '}
-                <code className="font-mono">success@razorpay</code> if asked.
+                TEST: UPI ID <code className="font-mono">success@razorpay</code>
               </p>
             </div>
 
