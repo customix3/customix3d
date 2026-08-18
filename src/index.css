@@ -5,9 +5,15 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
   }
   body {
     @apply bg-cream-50 text-ink-900 font-sans antialiased;
+    overflow-x: hidden;
+  }
+  img {
+    max-width: 100%;
+    height: auto;
   }
 }
 
@@ -29,6 +35,20 @@
   }
 }
 
+/* Hide scrollbar on mobile category chips */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 .product-float:hover {
   animation: float 3s ease-in-out infinite;
+}
+
+/* Tables: allow horizontal scroll on small screens */
+.table-wrap {
+  @apply w-full overflow-x-auto -mx-1 px-1;
 }
