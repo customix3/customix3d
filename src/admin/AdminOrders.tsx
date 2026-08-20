@@ -13,6 +13,9 @@ const STATUSES: OrderStatus[] = [
   'Refunded',
 ];
 
+/** Only these statuses open WhatsApp to the CUSTOMER number from the order */
+const WA_ON: OrderStatus[] = ['Shipped', 'Cancelled', 'Refunded'];
+
 export default function AdminOrders() {
   const { orders, loading, error, updateStatus, refresh } = useOrders();
 
@@ -21,21 +24,23 @@ export default function AdminOrders() {
   }, [refresh]);
 
   const onStatus = async (o: (typeof orders)[0], status: OrderStatus) => {
+    // Always save status first (Processing / Paid / etc. = no auto WA)
     await updateStatus(o.id, status);
-    if (status === 'Shipped' && o.customerWhatsapp) {
-      window.open(
-        waChatUrl(o.customerWhatsapp, shippedMessage(o.id, o.customerName)),
-        '_blank',
-        'noopener'
-      );
+
+    if (!WA_ON.includes(status)) return;
+    if (!o.customerWhatsapp?.trim()) {
+      alert('No customer WhatsApp on this order — cannot open chat.');
+      return;
     }
-    if ((status === 'Cancelled' || status === 'Refunded') && o.customerWhatsapp) {
-      window.open(
-        waChatUrl(o.customerWhatsapp, refundMessage(o.id, o.customerName, o.total)),
-        '_blank',
-        'noopener'
-      );
+
+    // Goes to CUSTOMER number saved on the order (not admin)
+    const phone = o.customerWhatsapp;
+    let text = `Hi ${o.customerName}, regarding CustoMix3D order ${o.id}`;
+    if (status === 'Shipped') text = shippedMessage(o.id, o.customerName);
+    if (status === 'Cancelled' || status === 'Refunded') {
+      text = refundMessage(o.id, o.customerName, o.total);
     }
+    window.open(waChatUrl(phone, text), '_blank', 'noopener');
   };
 
   return (
@@ -45,7 +50,10 @@ export default function AdminOrders() {
           <h1 className="font-display mb-1 text-2xl font-bold">Orders</h1>
           <p className="flex items-center gap-1.5 text-sm text-slate-500">
             <Cloud className="h-3.5 w-3.5" />
-            {loading ? 'Syncing…' : `${orders.length} orders · Firebase`}
+            {loading ? 'Syncing…' : `${orders.length} orders`}
+          </p>
+          <p className="mt-1 text-xs text-slate-400">
+            WhatsApp opens only on Shipped / Cancelled / Refunded → customer number on the order
           </p>
         </div>
         <button
@@ -72,7 +80,7 @@ export default function AdminOrders() {
                   <th className="px-4 py-3 font-medium">Customer</th>
                   <th className="px-4 py-3 font-medium">Total</th>
                   <th className="px-4 py-3 font-medium">Status</th>
-                  <th className="px-4 py-3 font-medium">WA</th>
+                  <th className="px-4 py-3 font-medium">WA (customer)</th>
                 </tr>
               </thead>
               <tbody>
@@ -85,17 +93,15 @@ export default function AdminOrders() {
                         {o.items?.map((i) => `${i.name} x${i.quantity}`).join(', ')}
                       </p>
                       {(o.status === 'Cancelled' || o.status === 'Refunded') && (
-                        <p className="mt-1 text-xs font-medium text-amber-700">
-                          Refund processed / in progress
-                        </p>
+                        <p className="mt-1 text-xs font-medium text-amber-700">Refund in progress / processed</p>
                       )}
                     </td>
                     <td className="px-4 py-3">
                       <p>{o.customerName}</p>
                       <p className="text-xs text-slate-500">{o.customerEmail}</p>
-                      <p className="text-xs text-slate-500">{o.customerWhatsapp}</p>
+                      <p className="text-xs font-medium text-slate-700">{o.customerWhatsapp || 'No phone'}</p>
                     </td>
-                    <td className="px-4 py-3 font-medium">Rs {o.total}</td>
+                    <td className="px-4 py-3 font-medium">₹{o.total}</td>
                     <td className="px-4 py-3">
                       <select
                         className="rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
@@ -114,16 +120,17 @@ export default function AdminOrders() {
                         <a
                           href={waChatUrl(
                             o.customerWhatsapp,
-                            `Hi ${o.customerName}, regarding your CustoMix3D order ${o.id}…`
+                            `Hi ${o.customerName}, regarding your CustoMix3D order ${o.id}`
                           )}
                           target="_blank"
                           rel="noreferrer"
                           className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1.5 text-xs font-medium text-emerald-700"
+                          title={`Chat ${o.customerWhatsapp}`}
                         >
-                          <MessageCircle className="h-3.5 w-3.5" /> Chat
+                          <MessageCircle className="h-3.5 w-3.5" /> {o.customerWhatsapp}
                         </a>
                       ) : (
-                        '—'
+                        <span className="text-xs text-slate-400">—</span>
                       )}
                     </td>
                   </tr>
