@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import PhoneInput, { splitPhone } from '@/components/PhoneInput';
 
 export default function SignupPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [whatsapp, setWhatsapp] = useState('');
+  const [whatsapp, setWhatsapp] = useState('+91');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { signup } = useAuth();
@@ -17,32 +18,30 @@ export default function SignupPage() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!whatsapp.trim()) {
-      setError('WhatsApp number is mandatory');
+    const { local } = splitPhone(whatsapp);
+    if (local.length < 8) {
+      setError('Enter a valid WhatsApp mobile number');
       return;
     }
     setLoading(true);
     try {
       await signup(name, email, password, whatsapp.trim());
       navigate(redirect.startsWith('/') ? redirect : '/account');
-    } catch {
-      setError('Signup failed');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Signup failed');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-md mx-auto px-4 py-16">
-      <h1 className="font-display text-3xl font-bold mb-2 text-center">Create account</h1>
-      {redirect === '/checkout' && (
-        <p className="text-center text-sm text-slate-500 mb-6">
-          Sign up to continue to checkout
-        </p>
-      )}
-      {!redirect.includes('checkout') && <div className="mb-6" />}
-      <form onSubmit={submit} className="card p-6 space-y-4">
-        {error && <p className="text-red-600 text-sm">{error}</p>}
+    <div className="mx-auto max-w-md px-4 py-16">
+      <h1 className="font-display mb-2 text-center text-3xl font-bold">Create account</h1>
+      <p className="mb-6 text-center text-sm text-slate-500">
+        WhatsApp with country code is required for order updates
+      </p>
+      <form onSubmit={submit} className="card space-y-4 p-6">
+        {error && <p className="text-sm text-red-600">{error}</p>}
         <div>
           <label className="text-sm font-medium text-slate-700">Full name *</label>
           <input
@@ -64,13 +63,10 @@ export default function SignupPage() {
         </div>
         <div>
           <label className="text-sm font-medium text-slate-700">WhatsApp *</label>
-          <input
-            className="input mt-1"
-            required
-            placeholder="+91 9XXXXXXXXX"
-            value={whatsapp}
-            onChange={(e) => setWhatsapp(e.target.value)}
-          />
+          <div className="mt-1">
+            <PhoneInput value={whatsapp} onChange={setWhatsapp} required />
+          </div>
+          <p className="mt-1 text-xs text-slate-400">We message shipping updates here</p>
         </div>
         <div>
           <label className="text-sm font-medium text-slate-700">Password *</label>
@@ -90,7 +86,7 @@ export default function SignupPage() {
           Already have an account?{' '}
           <Link
             to={`/login${redirect !== '/account' ? `?redirect=${encodeURIComponent(redirect)}` : ''}`}
-            className="text-sky-600 font-medium"
+            className="font-medium text-sky-600"
           >
             Sign in
           </Link>

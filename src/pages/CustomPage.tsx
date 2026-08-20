@@ -3,13 +3,14 @@ import { Link } from 'react-router-dom';
 import { useCustomOrders } from '@/store/customOrdersStore';
 import { useAuth } from '@/context/AuthContext';
 import { uploadCustomOrderImage } from '@/services/uploadImage';
+import PhoneInput, { splitPhone } from '@/components/PhoneInput';
 
 export default function CustomPage() {
   const submit = useCustomOrders((s) => s.submit);
   const { user } = useAuth();
   const fileRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(user?.name || '');
-  const [whatsapp, setWhatsapp] = useState(user?.whatsapp || '');
+  const [whatsapp, setWhatsapp] = useState(user?.whatsapp || '+91');
   const [email, setEmail] = useState(user?.email || '');
   const [notes, setNotes] = useState('');
   const [fileName, setFileName] = useState('');
@@ -56,7 +57,7 @@ export default function CustomPage() {
           Ref: <strong>{refId}</strong>
         </p>
         <p className="mb-6 text-ink-600">
-          We will review your image and contact you on WhatsApp with a quote. Track status in Account.
+          We will review your image and contact you on WhatsApp with a quote.
         </p>
         <Link to="/account" className="btn-primary">
           View my requests
@@ -70,6 +71,11 @@ export default function CustomPage() {
     setError('');
     if (!fileName || !imageUrl) {
       setError('Please upload an image of what you want printed');
+      return;
+    }
+    const { local } = splitPhone(whatsapp);
+    if (local.length < 8) {
+      setError('Enter a valid WhatsApp number with country code');
       return;
     }
     setLoading(true);
@@ -101,7 +107,7 @@ export default function CustomPage() {
     <div className="mx-auto max-w-xl px-4 py-12">
       <h1 className="font-display mb-2 text-3xl font-bold">Custom 3D Print</h1>
       <p className="mb-8 text-ink-600">
-        Upload a photo or design (JPG / PNG) of what you want printed and tell us the details.
+        Upload a photo or design (JPG / PNG) of what you want printed.
       </p>
       <form className="card space-y-4 p-6" onSubmit={onSubmit}>
         {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
@@ -115,14 +121,10 @@ export default function CustomPage() {
           />
         </div>
         <div>
-          <label className="text-sm font-medium">WhatsApp number *</label>
-          <input
-            className="input mt-1"
-            required
-            placeholder="+91..."
-            value={whatsapp}
-            onChange={(e) => setWhatsapp(e.target.value)}
-          />
+          <label className="text-sm font-medium">WhatsApp *</label>
+          <div className="mt-1">
+            <PhoneInput value={whatsapp} onChange={setWhatsapp} required />
+          </div>
         </div>
         <div>
           <label className="text-sm font-medium">Email</label>
@@ -146,7 +148,7 @@ export default function CustomPage() {
           {uploading && <p className="mt-2 text-xs text-slate-500">Uploading…</p>}
           {preview && (
             <div className="mt-3 overflow-hidden rounded-xl border border-slate-100">
-              <img src={preview} alt="Preview" className="max-h-56 w-full object-contain bg-cream-50" />
+              <img src={preview} alt="Preview" className="max-h-56 w-full bg-cream-50 object-contain" />
               <p className="truncate px-3 py-2 text-xs text-slate-500">{fileName}</p>
             </div>
           )}

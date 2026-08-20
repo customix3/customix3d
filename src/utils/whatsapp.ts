@@ -1,5 +1,7 @@
+/** Normalize phone for wa.me (digits only, keep country code) */
 export function waPhone(raw: string): string {
   let d = (raw || '').replace(/\D/g, '');
+  // If only 10 digits, assume India
   if (d.length === 10) d = '91' + d;
   return d;
 }

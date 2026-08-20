@@ -6,6 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { openRazorpayCheckout } from '@/services/paymentService';
 import { useOrders } from '@/store/ordersStore';
 import { subscribeOffers, type Offer } from '@/services/firestoreAdmin';
+import PhoneInput, { splitPhone } from '@/components/PhoneInput';
 
 export default function CheckoutPage() {
   const { items, total, clear } = useCart();
@@ -24,7 +25,7 @@ export default function CheckoutPage() {
   const [form, setForm] = useState({
     name: '',
     email: '',
-    whatsapp: '',
+    whatsapp: '+91',
     address: '',
     city: '',
     pincode: '',
@@ -43,7 +44,7 @@ export default function CheckoutPage() {
       ...f,
       name: f.name || user.name || '',
       email: f.email || user.email || '',
-      whatsapp: f.whatsapp || user.whatsapp || '',
+      whatsapp: f.whatsapp && f.whatsapp !== '+91' ? f.whatsapp : user.whatsapp || '+91',
     }));
   }, [user]);
 
@@ -54,9 +55,7 @@ export default function CheckoutPage() {
   }, [done, orderId, navigate]);
 
   const subtotal = typeof total === 'function' ? total() : 0;
-  const discount = applied
-    ? Math.round((subtotal * applied.discountPercent) / 100)
-    : 0;
+  const discount = applied ? Math.round((subtotal * applied.discountPercent) / 100) : 0;
   const amount = Math.max(1, subtotal - discount);
 
   const applyCoupon = () => {
@@ -78,9 +77,7 @@ export default function CheckoutPage() {
 
   if (authLoading || !user) {
     return (
-      <div className="mx-auto max-w-lg px-4 py-20 text-center text-slate-500">
-        Checking account…
-      </div>
+      <div className="mx-auto max-w-lg px-4 py-20 text-center text-slate-500">Checking account…</div>
     );
   }
 
@@ -130,8 +127,9 @@ export default function CheckoutPage() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!form.whatsapp.trim()) {
-      setError('WhatsApp number is required');
+    const { local } = splitPhone(form.whatsapp);
+    if (local.length < 8) {
+      setError('Enter a valid WhatsApp number with country code');
       return;
     }
     setLoading(true);
@@ -219,14 +217,14 @@ export default function CheckoutPage() {
                 />
               </div>
               <div className="sm:col-span-2">
-                <label className="text-sm font-medium">WhatsApp / Mobile *</label>
-                <input
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"
-                  required
-                  placeholder="10-digit mobile for UPI"
-                  value={form.whatsapp}
-                  onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
-                />
+                <label className="text-sm font-medium">WhatsApp *</label>
+                <div className="mt-1">
+                  <PhoneInput
+                    value={form.whatsapp}
+                    onChange={(v) => setForm({ ...form, whatsapp: v })}
+                    required
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -321,25 +319,11 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            <div className="mt-4 rounded-xl bg-slate-50 p-3">
-              <p className="mb-2 text-xs font-semibold text-slate-700">Pay with</p>
-              <div className="flex flex-wrap gap-2">
-                {['UPI', 'GPay / PhonePe', 'Cards', 'Netbanking', 'Wallets'].map((m) => (
-                  <span
-                    key={m}
-                    className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700"
-                  >
-                    {m}
-                  </span>
-                ))}
-              </div>
-            </div>
-
             {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
             <button
               type="submit"
               disabled={loading}
-              className="mt-4 w-full rounded-full bg-slate-900 py-3.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60"
+              className="mt-4 w-full rounded-full bg-slate-900 py-3.5 text-sm font-semibold text-white disabled:opacity-60"
             >
               {loading ? 'Opening payment…' : `Pay ₹${amount} · UPI / Card`}
             </button>
