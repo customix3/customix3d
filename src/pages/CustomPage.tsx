@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useCustomOrders } from '@/store/customOrdersStore';
 import { useAuth } from '@/context/AuthContext';
 import { uploadCustomOrderImage } from '@/services/uploadImage';
@@ -8,15 +8,19 @@ import PhoneInput, { splitPhone } from '@/components/PhoneInput';
 export default function CustomPage() {
   const submit = useCustomOrders((s) => s.submit);
   const { user } = useAuth();
+  const [params] = useSearchParams();
+  const hint = params.get('hint') || '';
   const fileRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(user?.name || '');
   const [whatsapp, setWhatsapp] = useState(user?.whatsapp || '+91');
   const [email, setEmail] = useState(user?.email || '');
-  const [notes, setNotes] = useState('');
+  const [notes, setNotes] = useState(hint ? `Looking for: ${hint}` : '');
   const [fileName, setFileName] = useState('');
   const [preview, setPreview] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [phase, setPhase] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [sent, setSent] = useState(false);
@@ -27,6 +31,8 @@ export default function CustomPage() {
     setFileName('');
     setPreview('');
     setImageUrl('');
+    setProgress(0);
+    setPhase('');
     if (!file) return;
     if (!file.type.startsWith('image/')) {
       setError('Please upload an image file (JPG, PNG, WebP, GIF)');
@@ -35,15 +41,29 @@ export default function CustomPage() {
     }
     setFileName(file.name);
     setUploading(true);
+    setPhase('Compressing…');
     try {
       const local = URL.createObjectURL(file);
       setPreview(local);
-      const url = await uploadCustomOrderImage(file);
+      const url = await uploadCustomOrderImage(file, (p) => {
+        setProgress(p.percent);
+        setPhase(
+          p.phase === 'compress'
+            ? 'Compressing…'
+            : p.phase === 'upload'
+              ? 'Uploading…'
+              : 'Done'
+        );
+      });
       setImageUrl(url);
+      setPhase('Ready');
+      setProgress(100);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed');
       setFileName('');
       setPreview('');
+      setProgress(0);
+      setPhase('');
     } finally {
       setUploading(false);
     }
@@ -107,7 +127,7 @@ export default function CustomPage() {
     <div className="mx-auto max-w-xl px-4 py-12">
       <h1 className="font-display mb-2 text-3xl font-bold">Custom 3D Print</h1>
       <p className="mb-8 text-ink-600">
-        Upload a photo or design (JPG / PNG) of what you want printed.
+        Upload a photo or design (JPG / PNG). We compress it on your phone for a fast upload.
       </p>
       <form className="card space-y-4 p-6" onSubmit={onSubmit}>
         {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
@@ -137,7 +157,9 @@ export default function CustomPage() {
         </div>
         <div>
           <label className="text-sm font-medium">Upload image *</label>
-          <p className="mt-0.5 text-xs text-slate-400">JPG, PNG, WebP, GIF — max 8MB</p>
+          <p className="mt-0.5 text-xs text-slate-400">
+            JPG, PNG, WebP — auto-compressed for speed
+          </p>
           <input
             ref={fileRef}
             type="file"
@@ -145,10 +167,29 @@ export default function CustomPage() {
             className="mt-2 block w-full text-sm"
             onChange={(e) => void onFile(e.target.files?.[0] || null)}
           />
-          {uploading && <p className="mt-2 text-xs text-slate-500">Uploading…</p>}
+
+          {(uploading || progress > 0) && (
+            <div className="mt-3">
+              <div className="mb-1 flex justify-between text-xs text-slate-500">
+                <span>{phase || 'Working…'}</span>
+                <span>{progress}%</span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                <div
+                  className="h-full rounded-full bg-brand-500 transition-all duration-200"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </div>
+          )}
+
           {preview && (
             <div className="mt-3 overflow-hidden rounded-xl border border-slate-100">
-              <img src={preview} alt="Preview" className="max-h-56 w-full bg-cream-50 object-contain" />
+              <img
+                src={preview}
+                alt="Preview"
+                className="max-h-56 w-full bg-cream-50 object-contain"
+              />
               <p className="truncate px-3 py-2 text-xs text-slate-500">{fileName}</p>
             </div>
           )}
@@ -163,7 +204,7 @@ export default function CustomPage() {
           />
         </div>
         <button type="submit" disabled={loading || uploading} className="btn-primary w-full">
-          {loading ? 'Submitting…' : uploading ? 'Wait for upload…' : 'Submit request'}
+          {loading ? 'Submitting…' : uploading ? `Uploading ${progress}%…` : 'Submit request'}
         </button>
       </form>
     </div>
