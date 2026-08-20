@@ -5,6 +5,7 @@ import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { openRazorpayCheckout } from '@/services/paymentService';
 import { useOrders } from '@/store/ordersStore';
+import { subscribeOffers, type Offer } from '@/services/firestoreAdmin';
 
 export default function CheckoutPage() {
   const { items, total, clear } = useCart();
@@ -16,6 +17,10 @@ export default function CheckoutPage() {
   const [paymentId, setPaymentId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [couponCode, setCouponCode] = useState('');
+  const [applied, setApplied] = useState<Offer | null>(null);
+  const [couponMsg, setCouponMsg] = useState('');
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -24,6 +29,8 @@ export default function CheckoutPage() {
     city: '',
     pincode: '',
   });
+
+  useEffect(() => subscribeOffers(setOffers), []);
 
   useEffect(() => {
     if (authLoading) return;
@@ -42,13 +49,32 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     if (!done || !orderId) return;
-    const t = setTimeout(() => {
-      navigate(`/orders/${orderId}`, { replace: true });
-    }, 3200);
+    const t = setTimeout(() => navigate(`/orders/${orderId}`, { replace: true }), 3200);
     return () => clearTimeout(t);
   }, [done, orderId, navigate]);
 
-  const amount = typeof total === 'function' ? total() : 0;
+  const subtotal = typeof total === 'function' ? total() : 0;
+  const discount = applied
+    ? Math.round((subtotal * applied.discountPercent) / 100)
+    : 0;
+  const amount = Math.max(1, subtotal - discount);
+
+  const applyCoupon = () => {
+    setCouponMsg('');
+    const code = couponCode.trim().toUpperCase();
+    if (!code) {
+      setCouponMsg('Enter a code');
+      return;
+    }
+    const found = offers.find((o) => o.active && o.code.toUpperCase() === code);
+    if (!found) {
+      setApplied(null);
+      setCouponMsg('Invalid or inactive code');
+      return;
+    }
+    setApplied(found);
+    setCouponMsg(`${found.discountPercent}% off applied`);
+  };
 
   if (authLoading || !user) {
     return (
@@ -85,23 +111,11 @@ export default function CheckoutPage() {
           🎉
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-          <h1 className="font-display text-2xl font-bold sm:text-3xl mb-2">Payment done!</h1>
-          <p className="text-lg text-slate-600 mb-1">Order placed successfully</p>
-          <p className="font-mono text-sm font-semibold text-brand-600 mb-2">{orderId}</p>
-          {paymentId && <p className="text-xs text-slate-400 mb-4">Payment: {paymentId}</p>}
-          <div className="flex justify-center gap-1 text-2xl mb-6" aria-hidden>
-            {['🍌', '✨', '🥳', '✨', '🍌'].map((e, i) => (
-              <motion.span
-                key={i}
-                initial={{ y: 0 }}
-                animate={{ y: [0, -10, 0] }}
-                transition={{ delay: 0.4 + i * 0.12, repeat: 2, duration: 0.5 }}
-              >
-                {e}
-              </motion.span>
-            ))}
-          </div>
-          <p className="text-sm text-slate-500 mb-6">Taking you to order tracking…</p>
+          <h1 className="font-display mb-2 text-2xl font-bold sm:text-3xl">Payment done!</h1>
+          <p className="mb-1 text-lg text-slate-600">Order placed successfully</p>
+          <p className="mb-2 font-mono text-sm font-semibold text-brand-600">{orderId}</p>
+          {paymentId && <p className="mb-4 text-xs text-slate-400">Payment: {paymentId}</p>}
+          <p className="mb-6 text-sm text-slate-500">Taking you to order tracking…</p>
           <Link
             to={`/orders/${orderId}`}
             className="inline-block rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white"
@@ -127,7 +141,9 @@ export default function CheckoutPage() {
         customerName: form.name,
         customerEmail: form.email,
         customerPhone: form.whatsapp,
-        description: `CustoMix3D order · ${items.length} item(s)`,
+        description: applied
+          ? `CustoMix3D · ${applied.code} · ${items.length} item(s)`
+          : `CustoMix3D order · ${items.length} item(s)`,
       });
 
       const payId = payment.razorpay_payment_id ? String(payment.razorpay_payment_id) : '';
@@ -154,7 +170,6 @@ export default function CheckoutPage() {
       if (rzpOrder) orderPayload.razorpayOrderId = rzpOrder;
 
       const order = await addOrder(orderPayload);
-
       clear();
       setOrderId(order.id);
       setPaymentId(payId);
@@ -162,7 +177,7 @@ export default function CheckoutPage() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Payment failed';
       if (msg.includes('permission') || msg.includes('Permission')) {
-        setError('Order save failed (Firestore rules). Publish open rules in Firebase.');
+        setError('Order save failed (Firestore rules).');
       } else if (msg !== 'Payment cancelled') {
         setError(msg);
       }
@@ -173,16 +188,16 @@ export default function CheckoutPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:py-10">
-      <h1 className="font-display text-2xl font-bold sm:text-3xl mb-2">Checkout</h1>
-      <p className="text-sm text-slate-500 mb-6 sm:mb-8">
+      <h1 className="font-display mb-2 text-2xl font-bold sm:text-3xl">Checkout</h1>
+      <p className="mb-6 text-sm text-slate-500 sm:mb-8">
         Signed in as <strong>{user.email}</strong> · Razorpay{' '}
-        <span className="text-amber-600 font-medium">TEST</span>
+        <span className="font-medium text-amber-600">TEST</span>
       </p>
 
       <form onSubmit={submit} className="grid gap-6 lg:grid-cols-5 lg:gap-8">
-        <div className="lg:col-span-3 space-y-6">
-          <div className="rounded-2xl border border-slate-100 bg-white p-5 sm:p-6 shadow-sm">
-            <h2 className="font-semibold mb-4">Contact</h2>
+        <div className="space-y-6 lg:col-span-3">
+          <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm sm:p-6">
+            <h2 className="mb-4 font-semibold">Contact</h2>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="text-sm font-medium">Full name *</label>
@@ -216,8 +231,8 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-100 bg-white p-5 sm:p-6 shadow-sm">
-            <h2 className="font-semibold mb-4">Shipping</h2>
+          <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm sm:p-6">
+            <h2 className="mb-4 font-semibold">Shipping</h2>
             <div className="space-y-4">
               <div>
                 <label className="text-sm font-medium">Address *</label>
@@ -253,8 +268,8 @@ export default function CheckoutPage() {
         </div>
 
         <div className="lg:col-span-2">
-          <div className="rounded-2xl border border-slate-100 bg-white p-5 sm:p-6 shadow-sm lg:sticky lg:top-20">
-            <h2 className="font-semibold mb-4">Order summary</h2>
+          <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm sm:p-6 lg:sticky lg:top-20">
+            <h2 className="mb-4 font-semibold">Order summary</h2>
             <ul className="space-y-3 text-sm">
               {items.map((i) => (
                 <li key={i.id} className="flex justify-between gap-2">
@@ -265,9 +280,45 @@ export default function CheckoutPage() {
                 </li>
               ))}
             </ul>
-            <div className="mt-4 flex justify-between border-t border-slate-100 pt-4 text-lg font-semibold">
-              <span>Total</span>
-              <span>₹{amount}</span>
+
+            <div className="mt-4 space-y-2 border-t border-slate-100 pt-4">
+              <div className="flex gap-2">
+                <input
+                  className="flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm uppercase"
+                  placeholder="Coupon code"
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={applyCoupon}
+                  className="rounded-xl bg-slate-100 px-3 text-sm font-medium"
+                >
+                  Apply
+                </button>
+              </div>
+              {couponMsg && (
+                <p className={`text-xs ${applied ? 'text-emerald-600' : 'text-red-600'}`}>
+                  {couponMsg}
+                </p>
+              )}
+            </div>
+
+            <div className="mt-3 space-y-1 text-sm">
+              <div className="flex justify-between text-slate-600">
+                <span>Subtotal</span>
+                <span>₹{subtotal}</span>
+              </div>
+              {discount > 0 && (
+                <div className="flex justify-between text-emerald-600">
+                  <span>Discount ({applied?.code})</span>
+                  <span>-₹{discount}</span>
+                </div>
+              )}
+              <div className="flex justify-between border-t border-slate-100 pt-2 text-lg font-semibold">
+                <span>Total</span>
+                <span>₹{amount}</span>
+              </div>
             </div>
 
             <div className="mt-4 rounded-xl bg-slate-50 p-3">
@@ -282,9 +333,6 @@ export default function CheckoutPage() {
                   </span>
                 ))}
               </div>
-              <p className="mt-2 text-[11px] text-amber-700">
-                TEST: UPI ID <code className="font-mono">success@razorpay</code>
-              </p>
             </div>
 
             {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
