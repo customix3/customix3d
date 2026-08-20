@@ -17,28 +17,23 @@ const ORDERS = 'orders';
 
 function isPlainObject(v: unknown): v is Record<string, unknown> {
   if (v === null || typeof v !== 'object' || Array.isArray(v)) return false;
-  // Firestore FieldValue / Timestamp sentinels — do not recurse
   if ('_methodName' in (v as object)) return false;
   if (typeof (v as { toDate?: unknown }).toDate === 'function') return false;
   return Object.getPrototypeOf(v) === Object.prototype || Object.getPrototypeOf(v) === null;
 }
 
-/** Strip undefined (Firestore rejects it). Keep null, FieldValue, arrays. */
 function clean(obj: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(obj)) {
     if (v === undefined) continue;
-    if (isPlainObject(v)) {
-      out[k] = clean(v);
-    } else if (Array.isArray(v)) {
+    if (isPlainObject(v)) out[k] = clean(v);
+    else if (Array.isArray(v)) {
       out[k] = v.map((item) => {
         if (item === undefined) return null;
         if (isPlainObject(item)) return clean(item);
         return item;
       });
-    } else {
-      out[k] = v;
-    }
+    } else out[k] = v;
   }
   return out;
 }
@@ -60,6 +55,7 @@ function mapProduct(id: string, data: Record<string, unknown>): Product {
       ? [String(data.image)]
       : [];
   const image = images[0] || String(data.image || '');
+  const stock = data.stock != null && data.stock !== '' ? Number(data.stock) : 99;
   return {
     id,
     name: String(data.name || ''),
@@ -70,6 +66,7 @@ function mapProduct(id: string, data: Record<string, unknown>): Product {
     category: String(data.category || 'home-decor'),
     description: String(data.description || ''),
     active: data.active !== false,
+    stock: Number.isFinite(stock) ? stock : 99,
   };
 }
 
@@ -90,6 +87,7 @@ export async function seedProductsIfEmpty(): Promise<void> {
           category: p.category,
           description: p.description,
           active: true,
+          stock: 25,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         })
@@ -100,7 +98,7 @@ export async function seedProductsIfEmpty(): Promise<void> {
 
 export function subscribeProducts(onData: (list: Product[]) => void, onError?: (e: Error) => void) {
   if (!db) {
-    onData(DEMO_PRODUCTS.map((p) => ({ ...p, images: [p.image], active: true })));
+    onData(DEMO_PRODUCTS.map((p) => ({ ...p, images: [p.image], active: true, stock: 25 })));
     return () => {};
   }
   return onSnapshot(
@@ -113,7 +111,7 @@ export function subscribeProducts(onData: (list: Product[]) => void, onError?: (
     (err) => {
       console.error('products subscribe', err);
       onError?.(err);
-      onData(DEMO_PRODUCTS.map((p) => ({ ...p, images: [p.image], active: true })));
+      onData(DEMO_PRODUCTS.map((p) => ({ ...p, images: [p.image], active: true, stock: 25 })));
     }
   );
 }
@@ -123,6 +121,7 @@ export async function createProduct(input: Omit<Product, 'id'>): Promise<Product
   const id = 'p_' + Date.now().toString(36);
   const images = (input.images?.length ? input.images : input.image ? [input.image] : []).slice(0, 10);
   const image = images[0] || input.image || '';
+  const stock = input.stock != null ? Number(input.stock) : 10;
   await setDoc(
     doc(db, PRODUCTS, id),
     clean({
@@ -134,11 +133,12 @@ export async function createProduct(input: Omit<Product, 'id'>): Promise<Product
       category: input.category,
       description: input.description,
       active: input.active !== false,
+      stock,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     })
   );
-  return { ...input, id, image, images, active: input.active !== false };
+  return { ...input, id, image, images, active: input.active !== false, stock };
 }
 
 export async function patchProduct(id: string, patch: Partial<Product>): Promise<void> {
@@ -157,6 +157,7 @@ export async function patchProduct(id: string, patch: Partial<Product>): Promise
   if (patch.category !== undefined) data.category = patch.category;
   if (patch.description !== undefined) data.description = patch.description;
   if (patch.active !== undefined) data.active = patch.active;
+  if (patch.stock !== undefined) data.stock = Number(patch.stock);
   await updateDoc(doc(db, PRODUCTS, id), data);
 }
 
@@ -227,8 +228,6 @@ export async function createOrderFs(
   if (!db) throw new Error('Firestore not configured');
   const id = 'ORD-' + Date.now().toString(36).toUpperCase();
   const createdAtIso = new Date().toISOString();
-
-  // Build payload field-by-field — NEVER put undefined in Firestore
   const payload: Record<string, unknown> = {
     customerName: String(input.customerName || ''),
     customerEmail: String(input.customerEmail || ''),
@@ -251,16 +250,11 @@ export async function createOrderFs(
     createdAt: serverTimestamp(),
     createdAtIso,
   };
-
-  if (input.paymentId && String(input.paymentId).trim()) {
-    payload.paymentId = String(input.paymentId);
-  }
+  if (input.paymentId && String(input.paymentId).trim()) payload.paymentId = String(input.paymentId);
   if (input.razorpayOrderId && String(input.razorpayOrderId).trim()) {
     payload.razorpayOrderId = String(input.razorpayOrderId);
   }
-
   await setDoc(doc(db, ORDERS, id), payload);
-
   return {
     id,
     createdAt: createdAtIso,
