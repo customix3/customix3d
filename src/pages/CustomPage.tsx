@@ -1,11 +1,14 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useCustomOrders } from '@/store/customOrdersStore';
+import { useAuth } from '@/context/AuthContext';
 
 export default function CustomPage() {
   const submit = useCustomOrders((s) => s.submit);
-  const [name, setName] = useState('');
-  const [whatsapp, setWhatsapp] = useState('');
-  const [email, setEmail] = useState('');
+  const { user } = useAuth();
+  const [name, setName] = useState(user?.name || '');
+  const [whatsapp, setWhatsapp] = useState(user?.whatsapp || '');
+  const [email, setEmail] = useState(user?.email || '');
   const [notes, setNotes] = useState('');
   const [fileName, setFileName] = useState('');
   const [loading, setLoading] = useState(false);
@@ -15,14 +18,17 @@ export default function CustomPage() {
 
   if (sent) {
     return (
-      <div className="max-w-md mx-auto px-4 py-20 text-center">
+      <div className="mx-auto max-w-md px-4 py-20 text-center">
         <h1 className="font-display text-2xl font-bold mb-3">Request received</h1>
         <p className="text-ink-600 mb-2">
           Ref: <strong>{refId}</strong>
         </p>
-        <p className="text-ink-600">
-          We will review your file and contact you on WhatsApp with a quote. Saved to admin cloud.
+        <p className="text-ink-600 mb-6">
+          We will review and contact you on WhatsApp with a quote. Track status in Account.
         </p>
+        <Link to="/account" className="btn-primary">
+          View my requests
+        </Link>
       </div>
     );
   }
@@ -58,10 +64,10 @@ export default function CustomPage() {
   };
 
   return (
-    <div className="max-w-xl mx-auto px-4 py-12">
+    <div className="mx-auto max-w-xl px-4 py-12">
       <h1 className="font-display text-3xl font-bold mb-2">Custom 3D Print</h1>
       <p className="text-ink-600 mb-8">Upload your STL / OBJ and tell us what you need.</p>
-      <form className="card p-6 space-y-4" onSubmit={onSubmit}>
+      <form className="card space-y-4 p-6" onSubmit={onSubmit}>
         {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
         <div>
           <label className="text-sm font-medium">Your name *</label>
@@ -99,10 +105,7 @@ export default function CustomPage() {
             className="mt-1 block w-full text-sm"
             onChange={(e) => setFileName(e.target.files?.[0]?.name || '')}
           />
-          {fileName && <p className="text-xs text-ink-500 mt-1">{fileName}</p>}
-          <p className="text-xs text-slate-400 mt-1">
-            File name is saved with the request (full file upload to Storage can be added next).
-          </p>
+          {fileName && <p className="mt-1 text-xs text-ink-500">{fileName}</p>}
         </div>
         <div>
           <label className="text-sm font-medium">Notes</label>

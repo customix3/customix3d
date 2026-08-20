@@ -1,7 +1,8 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Cloud, RefreshCw } from 'lucide-react';
 import { useOrders } from '@/store/ordersStore';
 import { useCustomOrders } from '@/store/customOrdersStore';
+import { subscribeUsers, type FsUser } from '@/services/firestoreAdmin';
 
 type Row = {
   key: string;
@@ -12,19 +13,39 @@ type Row = {
   custom: number;
   spent: number;
   lastSeen: string;
+  source: string;
 };
 
 export default function AdminCustomers() {
   const orders = useOrders((s) => s.orders);
   const refreshOrders = useOrders((s) => s.refresh);
   const custom = useCustomOrders((s) => s.items);
+  const refreshCustom = useCustomOrders((s) => s.refresh);
+  const [users, setUsers] = useState<FsUser[]>([]);
 
   useEffect(() => {
     refreshOrders();
-  }, [refreshOrders]);
+    refreshCustom();
+    return subscribeUsers(setUsers);
+  }, [refreshOrders, refreshCustom]);
 
   const rows = useMemo(() => {
     const map = new Map<string, Row>();
+
+    for (const u of users) {
+      const key = (u.email || u.whatsapp || u.id).toLowerCase();
+      map.set(key, {
+        key,
+        name: u.name || 'User',
+        email: u.email || '',
+        whatsapp: u.whatsapp || '',
+        orders: 0,
+        custom: 0,
+        spent: 0,
+        lastSeen: u.createdAt,
+        source: 'registered',
+      });
+    }
 
     for (const o of orders) {
       const key = (o.customerEmail || o.customerWhatsapp || o.customerName || o.id).toLowerCase();
@@ -39,11 +60,14 @@ export default function AdminCustomers() {
           custom: 0,
           spent: o.total || 0,
           lastSeen: o.createdAt,
+          source: 'order',
         });
       } else {
         prev.orders += 1;
         prev.spent += o.total || 0;
         if (o.createdAt > prev.lastSeen) prev.lastSeen = o.createdAt;
+        if (!prev.name || prev.name === 'User') prev.name = o.customerName || prev.name;
+        if (!prev.whatsapp) prev.whatsapp = o.customerWhatsapp || '';
       }
     }
 
@@ -60,6 +84,7 @@ export default function AdminCustomers() {
           custom: 1,
           spent: 0,
           lastSeen: c.createdAt,
+          source: 'custom',
         });
       } else {
         prev.custom += 1;
@@ -70,21 +95,24 @@ export default function AdminCustomers() {
     }
 
     return Array.from(map.values()).sort((a, b) => (a.lastSeen < b.lastSeen ? 1 : -1));
-  }, [orders, custom]);
+  }, [orders, custom, users]);
 
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-bold mb-1">Customers</h1>
-          <p className="text-sm text-slate-500 flex items-center gap-1.5">
+          <p className="flex items-center gap-1.5 text-sm text-slate-500">
             <Cloud className="h-3.5 w-3.5" />
-            {rows.length} from paid orders + custom requests
+            {rows.length} · registered + orders + custom
           </p>
         </div>
         <button
           type="button"
-          onClick={() => refreshOrders()}
+          onClick={() => {
+            refreshOrders();
+            refreshCustom();
+          }}
           className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium"
         >
           <RefreshCw className="h-4 w-4" /> Refresh
@@ -93,7 +121,7 @@ export default function AdminCustomers() {
 
       {rows.length === 0 ? (
         <div className="card p-10 text-center text-slate-500">
-          No customers yet. Anyone who completes checkout or submits a custom request will show here.
+          No customers yet. Signup, checkout, or custom request will appear here.
         </div>
       ) : (
         <div className="card overflow-hidden">

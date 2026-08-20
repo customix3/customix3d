@@ -6,6 +6,7 @@ import {
   deleteDoc,
   onSnapshot,
   serverTimestamp,
+  getDocs,
 } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 
@@ -16,7 +17,14 @@ function col(name: string) {
 
 // ——— Custom orders ———
 
-export type CustomOrderStatus = 'New' | 'Quoted' | 'Accepted' | 'Printing' | 'Shipped' | 'Done' | 'Rejected';
+export type CustomOrderStatus =
+  | 'New'
+  | 'Quoted'
+  | 'Accepted'
+  | 'Printing'
+  | 'Shipped'
+  | 'Done'
+  | 'Rejected';
 
 export type CustomOrder = {
   id: string;
@@ -79,15 +87,26 @@ export async function createCustomOrder(input: {
   if (!db) throw new Error('Firestore not configured');
   const id = 'CO-' + Date.now().toString(36).toUpperCase();
   const createdAtIso = new Date().toISOString();
-  await setDoc(doc(db, 'customOrders', id), {
-    ...input,
+  const payload: Record<string, unknown> = {
+    name: String(input.name || ''),
+    whatsapp: String(input.whatsapp || ''),
+    fileName: String(input.fileName || ''),
+    notes: String(input.notes || ''),
     status: 'New',
     createdAt: serverTimestamp(),
     createdAtIso,
-  });
+  };
+  if (input.email && input.email.trim()) {
+    payload.email = input.email.trim();
+  }
+  await setDoc(doc(db, 'customOrders', id), payload);
   return {
     id,
-    ...input,
+    name: String(input.name || ''),
+    whatsapp: String(input.whatsapp || ''),
+    email: input.email?.trim() || undefined,
+    fileName: String(input.fileName || ''),
+    notes: String(input.notes || ''),
     status: 'New',
     createdAt: createdAtIso,
   };
@@ -98,9 +117,82 @@ export async function patchCustomOrder(
   patch: { status?: CustomOrderStatus; quote?: number; notes?: string }
 ): Promise<void> {
   if (!db) throw new Error('Firestore not configured');
-  await updateDoc(doc(db, 'customOrders', id), {
-    ...patch,
-    updatedAt: serverTimestamp(),
+  const data: Record<string, unknown> = { updatedAt: serverTimestamp() };
+  if (patch.status !== undefined) data.status = patch.status;
+  if (patch.quote !== undefined && !Number.isNaN(patch.quote)) data.quote = Number(patch.quote);
+  if (patch.notes !== undefined) data.notes = patch.notes;
+  await updateDoc(doc(db, 'customOrders', id), data);
+}
+
+// ——— Registered users (from signup) ———
+
+export type FsUser = {
+  id: string;
+  name: string;
+  email: string;
+  whatsapp: string;
+  createdAt: string;
+};
+
+export async function saveUserProfile(u: {
+  id: string;
+  name: string;
+  email: string;
+  whatsapp: string;
+}): Promise<void> {
+  if (!db) return;
+  await setDoc(
+    doc(db, 'users', u.id),
+    {
+      name: u.name,
+      email: u.email,
+      whatsapp: u.whatsapp || '',
+      createdAt: serverTimestamp(),
+      createdAtIso: new Date().toISOString(),
+    },
+    { merge: true }
+  );
+}
+
+export function subscribeUsers(onData: (list: FsUser[]) => void) {
+  if (!db) {
+    onData([]);
+    return () => {};
+  }
+  return onSnapshot(col('users'), (snap) => {
+    const list = snap.docs.map((d) => {
+      const data = d.data();
+      return {
+        id: d.id,
+        name: data.name || '',
+        email: data.email || '',
+        whatsapp: data.whatsapp || '',
+        createdAt:
+          data.createdAt?.toDate?.()?.toISOString?.() ||
+          data.createdAtIso ||
+          new Date().toISOString(),
+      };
+    });
+    list.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+    onData(list);
+  });
+}
+
+export async function fetchUsersOnce(): Promise<FsUser[]> {
+  if (!db) return [];
+  const snap = await getDocs(col('users'));
+  return snap.docs.map((d) => {
+    const data = d.data();
+    return {
+      id: d.id,
+      name: data.name || '',
+      email: data.email || '',
+      whatsapp: data.whatsapp || '',
+      createdAt:
+        data.createdAt?.toDate?.()?.toISOString?.() ||
+        data.createdAtIso ||
+        new Date().toISOString(),
+    };
   });
 }
 
@@ -144,7 +236,7 @@ export async function saveOffer(input: Omit<Offer, 'id'> & { id?: string }): Pro
       code: input.code.toUpperCase().trim(),
       discountPercent: input.discountPercent,
       active: input.active,
-      description: input.description,
+      description: input.description || '',
       updatedAt: serverTimestamp(),
     },
     { merge: true }

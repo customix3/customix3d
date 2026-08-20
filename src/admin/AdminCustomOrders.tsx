@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Cloud } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Cloud, RefreshCw } from 'lucide-react';
 import { useCustomOrders, type CustomOrderStatus } from '@/store/customOrdersStore';
 
 const STATUSES: CustomOrderStatus[] = [
@@ -13,23 +13,57 @@ const STATUSES: CustomOrderStatus[] = [
 ];
 
 export default function AdminCustomOrders() {
-  const { items, loading, setStatus } = useCustomOrders();
+  const { items, loading, error, setStatus, refresh } = useCustomOrders();
   const [quoteDraft, setQuoteDraft] = useState<Record<string, string>>({});
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [msg, setMsg] = useState('');
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  const saveQuote = async (id: string, currentStatus: CustomOrderStatus) => {
+    const q = Number(quoteDraft[id] ?? 0);
+    setSavingId(id);
+    setMsg('');
+    try {
+      await setStatus(id, currentStatus === 'New' ? 'Quoted' : currentStatus, q);
+      setMsg('Saved');
+      setTimeout(() => setMsg(''), 2000);
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : 'Save failed');
+    } finally {
+      setSavingId(null);
+    }
+  };
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-bold mb-2">Custom Orders</h1>
-      <p className="text-sm text-slate-500 mb-6 flex items-center gap-1.5">
-        <Cloud className="h-3.5 w-3.5" />
-        {loading ? 'Syncing…' : `${items.length} requests · Firebase`}
-      </p>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-bold mb-1">Custom Orders</h1>
+          <p className="text-sm text-slate-500 flex items-center gap-1.5">
+            <Cloud className="h-3.5 w-3.5" />
+            {loading ? 'Syncing…' : `${items.length} requests · Firebase`}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => refresh()}
+          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </button>
+      </div>
+
+      {error && <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
+      {msg && <p className="mb-4 text-sm text-emerald-600">{msg}</p>}
 
       {items.length === 0 && !loading ? (
         <div className="card p-10 text-center text-slate-500">
           <p className="font-medium text-slate-700 mb-1">No custom orders yet</p>
-          <p className="text-sm">
-            When a customer submits <strong>/custom</strong>, it will appear here on every device.
-          </p>
+          <p className="text-sm">When a customer submits /custom, it appears here on every device.</p>
         </div>
       ) : (
         <div className="card overflow-hidden">
@@ -60,7 +94,7 @@ export default function AdminCustomOrders() {
                     </td>
                     <td className="px-4 py-3">
                       <p className="font-medium text-slate-700">{o.fileName || '—'}</p>
-                      <p className="text-xs text-slate-500 mt-1 max-w-xs">{o.notes || '—'}</p>
+                      <p className="mt-1 max-w-xs text-xs text-slate-500">{o.notes || '—'}</p>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
@@ -75,13 +109,11 @@ export default function AdminCustomOrders() {
                         />
                         <button
                           type="button"
-                          className="text-xs font-medium text-sky-600 px-1"
-                          onClick={() => {
-                            const q = Number(quoteDraft[o.id] ?? o.quote ?? 0);
-                            void setStatus(o.id, o.status === 'New' ? 'Quoted' : o.status, q);
-                          }}
+                          disabled={savingId === o.id}
+                          className="px-1 text-xs font-medium text-sky-600 disabled:opacity-50"
+                          onClick={() => void saveQuote(o.id, o.status)}
                         >
-                          Save
+                          {savingId === o.id ? '…' : 'Save'}
                         </button>
                       </div>
                     </td>
