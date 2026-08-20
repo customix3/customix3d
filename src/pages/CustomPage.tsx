@@ -35,7 +35,6 @@ export default function CustomPage() {
     setFileName(file.name);
     setUploading(true);
     try {
-      // local preview first
       const local = URL.createObjectURL(file);
       setPreview(local);
       const url = await uploadCustomOrderImage(file);
@@ -79,6 +78,7 @@ export default function CustomPage() {
         name: name.trim(),
         whatsapp: whatsapp.trim(),
         email: email.trim() || undefined,
+        customerId: user?.id,
         fileName,
         imageUrl,
         notes: notes.trim(),

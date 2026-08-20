@@ -15,8 +15,6 @@ function col(name: string) {
   return collection(db, name);
 }
 
-// ——— Custom orders ———
-
 export type CustomOrderStatus =
   | 'New'
   | 'Quoted'
@@ -31,6 +29,7 @@ export type CustomOrder = {
   name: string;
   whatsapp: string;
   email?: string;
+  customerId?: string;
   fileName: string;
   imageUrl?: string;
   notes: string;
@@ -57,6 +56,7 @@ export function subscribeCustomOrders(
           name: data.name || '',
           whatsapp: data.whatsapp || '',
           email: data.email || '',
+          customerId: data.customerId || undefined,
           fileName: data.fileName || '',
           imageUrl: data.imageUrl || undefined,
           notes: data.notes || '',
@@ -83,6 +83,7 @@ export async function createCustomOrder(input: {
   name: string;
   whatsapp: string;
   email?: string;
+  customerId?: string;
   fileName: string;
   imageUrl?: string;
   notes: string;
@@ -99,18 +100,16 @@ export async function createCustomOrder(input: {
     createdAt: serverTimestamp(),
     createdAtIso,
   };
-  if (input.email && input.email.trim()) {
-    payload.email = input.email.trim();
-  }
-  if (input.imageUrl) {
-    payload.imageUrl = input.imageUrl;
-  }
+  if (input.email && input.email.trim()) payload.email = input.email.trim().toLowerCase();
+  if (input.customerId) payload.customerId = input.customerId;
+  if (input.imageUrl) payload.imageUrl = input.imageUrl;
   await setDoc(doc(db, 'customOrders', id), payload);
   return {
     id,
     name: String(input.name || ''),
     whatsapp: String(input.whatsapp || ''),
-    email: input.email?.trim() || undefined,
+    email: input.email?.trim().toLowerCase() || undefined,
+    customerId: input.customerId,
     fileName: String(input.fileName || ''),
     imageUrl: input.imageUrl,
     notes: String(input.notes || ''),
@@ -130,8 +129,6 @@ export async function patchCustomOrder(
   if (patch.notes !== undefined) data.notes = patch.notes;
   await updateDoc(doc(db, 'customOrders', id), data);
 }
-
-// ——— Registered users ———
 
 export type FsUser = {
   id: string;
@@ -203,8 +200,6 @@ export async function fetchUsersOnce(): Promise<FsUser[]> {
   });
 }
 
-// ——— Offers ———
-
 export type Offer = {
   id: string;
   code: string;
@@ -254,8 +249,6 @@ export async function deleteOffer(id: string): Promise<void> {
   if (!db) throw new Error('Firestore not configured');
   await deleteDoc(doc(db, 'offers', id));
 }
-
-// ——— Reviews ———
 
 export type Review = {
   id: string;

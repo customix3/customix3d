@@ -17,6 +17,7 @@ interface State {
     name: string;
     whatsapp: string;
     email?: string;
+    customerId?: string;
     fileName: string;
     imageUrl?: string;
     notes: string;

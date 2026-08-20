@@ -3,22 +3,54 @@ import { useAuth } from '@/context/AuthContext';
 import { useCustomOrders } from '@/store/customOrdersStore';
 import { useOrders } from '@/store/ordersStore';
 
+function digits(s: string) {
+  return (s || '').replace(/\D/g, '');
+}
+
+/** Strict ownership: never show other customers' requests */
+function isMyCustom(
+  c: { customerId?: string; email?: string; whatsapp: string },
+  user: { id: string; email: string; whatsapp: string } | null
+) {
+  if (!user) return false;
+
+  // 1) Same logged-in user id (best)
+  if (c.customerId && user.id && c.customerId === user.id) return true;
+
+  // 2) Exact email match (both non-empty)
+  const uEmail = (user.email || '').trim().toLowerCase();
+  const cEmail = (c.email || '').trim().toLowerCase();
+  if (uEmail && cEmail && uEmail === cEmail) return true;
+
+  // 3) Exact last-10 digits of WhatsApp (both must have at least 10 digits)
+  const uPhone = digits(user.whatsapp);
+  const cPhone = digits(c.whatsapp);
+  if (uPhone.length >= 10 && cPhone.length >= 10) {
+    if (uPhone.slice(-10) === cPhone.slice(-10)) return true;
+  }
+
+  return false;
+}
+
 export default function AccountPage() {
   const { user, logout } = useAuth();
   const custom = useCustomOrders((s) => s.items);
   const orders = useOrders((s) => s.orders);
 
-  const myCustom = custom.filter(
-    (c) =>
-      (user?.email && c.email?.toLowerCase() === user.email.toLowerCase()) ||
-      (user?.whatsapp &&
-        c.whatsapp &&
-        c.whatsapp.includes(user.whatsapp.replace(/\D/g, '').slice(-10)))
-  );
+  const myCustom = custom.filter((c) => isMyCustom(c, user));
 
-  const myOrders = orders.filter(
-    (o) => user?.email && o.customerEmail?.toLowerCase() === user.email.toLowerCase()
-  );
+  const myOrders = orders.filter((o) => {
+    if (!user) return false;
+    const uEmail = (user.email || '').trim().toLowerCase();
+    const oEmail = (o.customerEmail || '').trim().toLowerCase();
+    if (uEmail && oEmail && uEmail === oEmail) return true;
+    const uPhone = digits(user.whatsapp);
+    const oPhone = digits(o.customerWhatsapp || '');
+    if (uPhone.length >= 10 && oPhone.length >= 10 && uPhone.slice(-10) === oPhone.slice(-10)) {
+      return true;
+    }
+    return false;
+  });
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-12">
@@ -46,7 +78,7 @@ export default function AccountPage() {
       <h2 className="font-display mb-4 text-xl font-bold">My custom requests</h2>
       {myCustom.length === 0 ? (
         <div className="card p-6 text-sm text-slate-500">
-          No custom requests yet.{' '}
+          No custom requests yet for this account.{' '}
           <Link to="/custom" className="font-medium text-brand-600">
             Submit one
           </Link>
