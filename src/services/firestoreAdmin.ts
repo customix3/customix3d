@@ -7,6 +7,7 @@ import {
   onSnapshot,
   serverTimestamp,
   getDocs,
+  getDoc,
 } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 
@@ -158,6 +159,46 @@ export async function saveUserProfile(u: {
   );
 }
 
+/** Load registered user (incl. WhatsApp) from Firebase */
+export async function getUserProfile(userId: string): Promise<FsUser | null> {
+  if (!db) return null;
+  const snap = await getDoc(doc(db, 'users', userId));
+  if (!snap.exists()) return null;
+  const data = snap.data();
+  return {
+    id: snap.id,
+    name: data.name || '',
+    email: data.email || '',
+    whatsapp: data.whatsapp || '',
+    createdAt:
+      data.createdAt?.toDate?.()?.toISOString?.() ||
+      data.createdAtIso ||
+      new Date().toISOString(),
+  };
+}
+
+export async function findUserByEmail(email: string): Promise<FsUser | null> {
+  if (!db) return null;
+  const target = email.trim().toLowerCase();
+  const snap = await getDocs(col('users'));
+  for (const d of snap.docs) {
+    const data = d.data();
+    if ((data.email || '').toLowerCase() === target) {
+      return {
+        id: d.id,
+        name: data.name || '',
+        email: data.email || '',
+        whatsapp: data.whatsapp || '',
+        createdAt:
+          data.createdAt?.toDate?.()?.toISOString?.() ||
+          data.createdAtIso ||
+          new Date().toISOString(),
+      };
+    }
+  }
+  return null;
+}
+
 export function subscribeUsers(onData: (list: FsUser[]) => void) {
   if (!db) {
     onData([]);
@@ -294,4 +335,46 @@ export async function patchReview(id: string, approved: boolean): Promise<void> 
 export async function deleteReview(id: string): Promise<void> {
   if (!db) throw new Error('Firestore not configured');
   await deleteDoc(doc(db, 'reviews', id));
+}
+
+/** Site promo popup (circular banner) */
+export type PromoPopup = {
+  enabled: boolean;
+  title: string;
+  subtitle: string;
+  imageUrl: string;
+  link: string;
+};
+
+export function subscribePromoPopup(onData: (p: PromoPopup) => void) {
+  if (!db) {
+    onData({ enabled: false, title: '', subtitle: '', imageUrl: '', link: '/products' });
+    return () => {};
+  }
+  return onSnapshot(doc(db, 'settings', 'promoPopup'), (snap) => {
+    const data = snap.data() || {};
+    onData({
+      enabled: data.enabled === true,
+      title: data.title || 'Special offer',
+      subtitle: data.subtitle || '',
+      imageUrl: data.imageUrl || '',
+      link: data.link || '/products',
+    });
+  });
+}
+
+export async function savePromoPopup(p: PromoPopup): Promise<void> {
+  if (!db) throw new Error('Firestore not configured');
+  await setDoc(
+    doc(db, 'settings', 'promoPopup'),
+    {
+      enabled: p.enabled,
+      title: p.title,
+      subtitle: p.subtitle,
+      imageUrl: p.imageUrl,
+      link: p.link,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true }
+  );
 }
