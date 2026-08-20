@@ -19,24 +19,22 @@ export default function LoginPage() {
     try {
       await login(email, password);
       navigate(redirect.startsWith('/') ? redirect : '/account');
-    } catch {
-      setError('Login failed');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Login failed');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-md mx-auto px-4 py-16">
-      <h1 className="font-display text-3xl font-bold mb-2 text-center">Welcome back</h1>
+    <div className="mx-auto max-w-md px-4 py-16">
+      <h1 className="font-display mb-2 text-center text-3xl font-bold">Welcome back</h1>
       {redirect === '/checkout' && (
-        <p className="text-center text-sm text-slate-500 mb-6">
-          Sign in to continue to checkout
-        </p>
+        <p className="mb-6 text-center text-sm text-slate-500">Sign in to continue to checkout</p>
       )}
       {!redirect.includes('checkout') && <div className="mb-6" />}
-      <form onSubmit={submit} className="card p-6 space-y-4">
-        {error && <p className="text-red-600 text-sm">{error}</p>}
+      <form onSubmit={submit} className="card space-y-4 p-6">
+        {error && <p className="text-sm text-red-600">{error}</p>}
         <div>
           <label className="text-sm font-medium text-slate-700">Email</label>
           <input
@@ -64,9 +62,9 @@ export default function LoginPage() {
           No account?{' '}
           <Link
             to={`/signup${redirect !== '/account' ? `?redirect=${encodeURIComponent(redirect)}` : ''}`}
-            className="text-sky-600 font-medium"
+            className="font-medium text-sky-600"
           >
-            Sign up
+            Sign up with WhatsApp
           </Link>
         </p>
       </form>
