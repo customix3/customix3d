@@ -12,7 +12,8 @@ export type OrderStatus =
   | 'Processing'
   | 'Shipped'
   | 'Delivered'
-  | 'Cancelled';
+  | 'Cancelled'
+  | 'Refunded';
 
 export type OrderItem = {
   id: string;
@@ -70,15 +71,9 @@ export const useOrders = create<OrdersState>((set, get) => ({
   orders: [],
   loading: true,
   error: null,
-
-  init: () => {
-    startSub(set);
-  },
-
+  init: () => startSub(set),
   refresh: () => startSub(set),
-
   addOrder: async (input) => {
-    // Only pass defined optional fields into Firestore layer
     const data: Parameters<typeof createOrderFs>[0] = {
       customerName: input.customerName,
       customerEmail: input.customerEmail,
@@ -92,20 +87,15 @@ export const useOrders = create<OrdersState>((set, get) => ({
     };
     if (input.paymentId) data.paymentId = input.paymentId;
     if (input.razorpayOrderId) data.razorpayOrderId = input.razorpayOrderId;
-
     const order = await createOrderFs(data);
     const mapped: Order = { ...order, status: (order.status as OrderStatus) || 'Paid' };
-    const exists = get().orders.some((o) => o.id === mapped.id);
-    if (!exists) {
+    if (!get().orders.some((o) => o.id === mapped.id)) {
       set({ orders: [mapped, ...get().orders] });
     }
     return mapped;
   },
-
   updateStatus: async (id, status) => {
     await patchOrderStatus(id, status);
-    set({
-      orders: get().orders.map((o) => (o.id === id ? { ...o, status } : o)),
-    });
+    set({ orders: get().orders.map((o) => (o.id === id ? { ...o, status } : o)) });
   },
 }));
