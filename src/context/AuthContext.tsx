@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { saveUserProfile, findUserByEmail, getUserProfile } from '@/services/firestoreAdmin';
 
 export interface User {
@@ -23,48 +23,116 @@ function digits(s: string) {
   return (s || '').replace(/\D/g, '');
 }
 
+function clearLocal() {
+  try {
+    localStorage.removeItem(KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(KEY);
-      if (raw) setUser(JSON.parse(raw));
-    } catch {
-      /* ignore */
-    }
-    setLoading(false);
+  const logout = useCallback(() => {
+    setUser(null);
+    clearLocal();
   }, []);
+
+  /** If account was deleted in Firebase → force logout (no manual clear needed) */
+  const validateSession = useCallback(
+    async (u: User) => {
+      try {
+        let profile = await getUserProfile(u.id);
+        if (!profile && u.email) profile = await findUserByEmail(u.email);
+        if (!profile || !profile.whatsapp) {
+          logout();
+          return null;
+        }
+        const synced: User = {
+          id: profile.id,
+          name: profile.name || u.name,
+          email: profile.email || u.email,
+          whatsapp: profile.whatsapp,
+        };
+        setUser(synced);
+        localStorage.setItem(KEY, JSON.stringify(synced));
+        return synced;
+      } catch {
+        // network error — keep local session
+        return u;
+      }
+    },
+    [logout]
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const raw = localStorage.getItem(KEY);
+        if (!raw) {
+          if (!cancelled) setLoading(false);
+          return;
+        }
+        const parsed = JSON.parse(raw) as User;
+        if (!cancelled) setUser(parsed);
+        // Auto logout if wiped from Firebase
+        await validateSession(parsed);
+      } catch {
+        clearLocal();
+        if (!cancelled) setUser(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [validateSession]);
+
+  // Re-check every 45s while logged in (catches admin “Delete all users”)
+  useEffect(() => {
+    if (!user) return;
+    const id = window.setInterval(() => {
+      void validateSession(user);
+    }, 45000);
+    return () => clearInterval(id);
+  }, [user, validateSession]);
+
+  // Re-check when tab becomes visible again
+  useEffect(() => {
+    if (!user) return;
+    const onVis = () => {
+      if (document.visibilityState === 'visible') void validateSession(user);
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [user, validateSession]);
 
   const login = async (email: string, _password: string) => {
     const emailNorm = email.trim().toLowerCase();
     const id = 'u_' + emailNorm.replace(/[^a-z0-9]/g, '_');
 
-    // Prefer registered profile in Firebase (has WhatsApp)
     let profile = await findUserByEmail(emailNorm);
     if (!profile) profile = await getUserProfile(id);
 
-    const u: User = {
-      id: profile?.id || id,
-      name: profile?.name || emailNorm.split('@')[0],
-      email: profile?.email || emailNorm,
-      whatsapp: profile?.whatsapp || '',
-    };
-
-    if (!u.whatsapp) {
+    if (!profile || !profile.whatsapp) {
       throw new Error(
-        'No WhatsApp on this account. Sign up again with your WhatsApp number, or update profile.'
+        'Account not found or no WhatsApp. Please sign up with your WhatsApp number.'
       );
     }
 
+    const u: User = {
+      id: profile.id,
+      name: profile.name || emailNorm.split('@')[0],
+      email: profile.email || emailNorm,
+      whatsapp: profile.whatsapp,
+    };
+
     setUser(u);
     localStorage.setItem(KEY, JSON.stringify(u));
-    try {
-      await saveUserProfile(u);
-    } catch (e) {
-      console.warn('save user profile', e);
-    }
   };
 
   const signup = async (name: string, email: string, _password: string, whatsapp: string) => {
@@ -86,11 +154,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       console.warn('save user profile', e);
     }
-  };
-
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem(KEY);
   };
 
   return (
