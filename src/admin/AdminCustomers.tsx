@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Cloud, RefreshCw } from 'lucide-react';
+import { Cloud, RefreshCw, Trash2 } from 'lucide-react';
 import { useOrders } from '@/store/ordersStore';
 import { useCustomOrders } from '@/store/customOrdersStore';
 import { subscribeUsers, type FsUser } from '@/services/firestoreAdmin';
+import { deleteAllUsers } from '@/services/deleteUsers';
 
 type Row = {
   key: string;
@@ -22,12 +23,32 @@ export default function AdminCustomers() {
   const custom = useCustomOrders((s) => s.items);
   const refreshCustom = useCustomOrders((s) => s.refresh);
   const [users, setUsers] = useState<FsUser[]>([]);
+  const [wiping, setWiping] = useState(false);
 
   useEffect(() => {
     refreshOrders();
     refreshCustom();
     return subscribeUsers(setUsers);
   }, [refreshOrders, refreshCustom]);
+
+  const wipeUsers = async () => {
+    if (
+      !confirm(
+        'Delete ALL registered users from Firebase?\n\nCustomers must sign up again with WhatsApp.\nOrders/custom requests are NOT deleted.'
+      )
+    )
+      return;
+    if (!confirm('Sure? This cannot be undone.')) return;
+    setWiping(true);
+    try {
+      const n = await deleteAllUsers();
+      alert(`Deleted ${n} user(s). Ask everyone to sign up fresh.`);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Delete failed');
+    } finally {
+      setWiping(false);
+    }
+  };
 
   const rows = useMemo(() => {
     const map = new Map<string, Row>();
@@ -101,27 +122,38 @@ export default function AdminCustomers() {
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold mb-1">Customers</h1>
+          <h1 className="font-display mb-1 text-2xl font-bold">Customers</h1>
           <p className="flex items-center gap-1.5 text-sm text-slate-500">
             <Cloud className="h-3.5 w-3.5" />
-            {rows.length} · registered + orders + custom
+            {users.length} registered · {rows.length} total rows
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            refreshOrders();
-            refreshCustom();
-          }}
-          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium"
-        >
-          <RefreshCw className="h-4 w-4" /> Refresh
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              refreshOrders();
+              refreshCustom();
+            }}
+            className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium"
+          >
+            <RefreshCw className="h-4 w-4" /> Refresh
+          </button>
+          <button
+            type="button"
+            disabled={wiping}
+            onClick={() => void wipeUsers()}
+            className="inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100 disabled:opacity-60"
+          >
+            <Trash2 className="h-4 w-4" />
+            {wiping ? 'Deleting…' : 'Delete all users'}
+          </button>
+        </div>
       </div>
 
       {rows.length === 0 ? (
         <div className="card p-10 text-center text-slate-500">
-          No customers yet. Signup, checkout, or custom request will appear here.
+          No customers yet. Signup with WhatsApp will appear here.
         </div>
       ) : (
         <div className="card overflow-hidden">
