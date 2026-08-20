@@ -18,6 +18,7 @@ interface State {
     whatsapp: string;
     email?: string;
     fileName: string;
+    imageUrl?: string;
     notes: string;
   }) => Promise<CustomOrder>;
   setStatus: (id: string, status: CustomOrderStatus, quote?: number) => Promise<void>;

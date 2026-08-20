@@ -32,6 +32,7 @@ export type CustomOrder = {
   whatsapp: string;
   email?: string;
   fileName: string;
+  imageUrl?: string;
   notes: string;
   status: CustomOrderStatus;
   quote?: number;
@@ -57,6 +58,7 @@ export function subscribeCustomOrders(
           whatsapp: data.whatsapp || '',
           email: data.email || '',
           fileName: data.fileName || '',
+          imageUrl: data.imageUrl || undefined,
           notes: data.notes || '',
           status: (data.status as CustomOrderStatus) || 'New',
           quote: data.quote != null ? Number(data.quote) : undefined,
@@ -82,6 +84,7 @@ export async function createCustomOrder(input: {
   whatsapp: string;
   email?: string;
   fileName: string;
+  imageUrl?: string;
   notes: string;
 }): Promise<CustomOrder> {
   if (!db) throw new Error('Firestore not configured');
@@ -99,6 +102,9 @@ export async function createCustomOrder(input: {
   if (input.email && input.email.trim()) {
     payload.email = input.email.trim();
   }
+  if (input.imageUrl) {
+    payload.imageUrl = input.imageUrl;
+  }
   await setDoc(doc(db, 'customOrders', id), payload);
   return {
     id,
@@ -106,6 +112,7 @@ export async function createCustomOrder(input: {
     whatsapp: String(input.whatsapp || ''),
     email: input.email?.trim() || undefined,
     fileName: String(input.fileName || ''),
+    imageUrl: input.imageUrl,
     notes: String(input.notes || ''),
     status: 'New',
     createdAt: createdAtIso,
@@ -124,7 +131,7 @@ export async function patchCustomOrder(
   await updateDoc(doc(db, 'customOrders', id), data);
 }
 
-// ——— Registered users (from signup) ———
+// ——— Registered users ———
 
 export type FsUser = {
   id: string;

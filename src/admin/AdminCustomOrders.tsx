@@ -41,8 +41,8 @@ export default function AdminCustomOrders() {
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold mb-1">Custom Orders</h1>
-          <p className="text-sm text-slate-500 flex items-center gap-1.5">
+          <h1 className="font-display mb-1 text-2xl font-bold">Custom Orders</h1>
+          <p className="flex items-center gap-1.5 text-sm text-slate-500">
             <Cloud className="h-3.5 w-3.5" />
             {loading ? 'Syncing…' : `${items.length} requests · Firebase`}
           </p>
@@ -62,8 +62,8 @@ export default function AdminCustomOrders() {
 
       {items.length === 0 && !loading ? (
         <div className="card p-10 text-center text-slate-500">
-          <p className="font-medium text-slate-700 mb-1">No custom orders yet</p>
-          <p className="text-sm">When a customer submits /custom, it appears here on every device.</p>
+          <p className="mb-1 font-medium text-slate-700">No custom orders yet</p>
+          <p className="text-sm">When a customer submits /custom with an image, it appears here.</p>
         </div>
       ) : (
         <div className="card overflow-hidden">
@@ -73,7 +73,7 @@ export default function AdminCustomOrders() {
                 <tr>
                   <th className="px-4 py-3 font-medium">Request</th>
                   <th className="px-4 py-3 font-medium">Customer</th>
-                  <th className="px-4 py-3 font-medium">File / Notes</th>
+                  <th className="px-4 py-3 font-medium">Image / Notes</th>
                   <th className="px-4 py-3 font-medium">Quote ₹</th>
                   <th className="px-4 py-3 font-medium">Status</th>
                 </tr>
@@ -93,7 +93,16 @@ export default function AdminCustomOrders() {
                       {o.email && <p className="text-xs text-slate-400">{o.email}</p>}
                     </td>
                     <td className="px-4 py-3">
-                      <p className="font-medium text-slate-700">{o.fileName || '—'}</p>
+                      {o.imageUrl ? (
+                        <a href={o.imageUrl} target="_blank" rel="noreferrer" className="block">
+                          <img
+                            src={o.imageUrl}
+                            alt={o.fileName}
+                            className="mb-1 h-16 w-16 rounded-lg border object-cover bg-cream-50"
+                          />
+                        </a>
+                      ) : null}
+                      <p className="text-xs font-medium text-slate-700">{o.fileName || '—'}</p>
                       <p className="mt-1 max-w-xs text-xs text-slate-500">{o.notes || '—'}</p>
                     </td>
                     <td className="px-4 py-3">
