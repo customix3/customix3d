@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useSite } from '@/context/SiteContext';
+import AdminOrderAlerts from '@/admin/AdminOrderAlerts';
 
 const links = [
   { to: '/admin', end: true, label: 'Dashboard', icon: LayoutDashboard },
@@ -90,7 +91,6 @@ export default function AdminLayout() {
 
   return (
     <div className="flex min-h-screen flex-col bg-cream-50 md:flex-row">
-      {/* Mobile top bar */}
       <div className="sticky top-0 z-40 flex h-14 items-center gap-3 border-b border-cream-200 bg-white px-3 md:hidden">
         <button
           type="button"
@@ -105,7 +105,6 @@ export default function AdminLayout() {
         </span>
       </div>
 
-      {/* Mobile drawer */}
       {menuOpen && (
         <>
           <div
@@ -118,7 +117,6 @@ export default function AdminLayout() {
         </>
       )}
 
-      {/* Desktop sidebar */}
       <aside className="hidden w-56 shrink-0 flex-col border-r border-cream-200 bg-white md:flex">
         {Sidebar}
       </aside>
@@ -126,6 +124,9 @@ export default function AdminLayout() {
       <main className="min-w-0 flex-1 overflow-auto p-4 sm:p-6 md:p-8">
         <Outlet />
       </main>
+
+      {/* Loud siren + browser notification when new order / custom arrives */}
+      <AdminOrderAlerts />
     </div>
   );
 }
