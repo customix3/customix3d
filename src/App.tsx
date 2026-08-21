@@ -6,6 +6,7 @@ import ProductsPage from './pages/ProductsPage';
 import ProductDetailPage from './pages/ProductDetailPage';
 import CategoryPage from './pages/CategoryPage';
 import CustomPage from './pages/CustomPage';
+import PersonalizePage from './pages/PersonalizePage';
 import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
 import LoginPage from './pages/LoginPage';
@@ -31,6 +32,7 @@ import AdminOffers from './admin/AdminOffers';
 import AdminReviews from './admin/AdminReviews';
 import AdminSettings from './admin/AdminSettings';
 import AdminHomepage from './admin/AdminHomepage';
+import AdminCategories from './admin/AdminCategories';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import { useSite } from './context/SiteContext';
@@ -51,6 +53,7 @@ export default function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/products" element={<ProductsPage />} />
           <Route path="/products/:id" element={<ProductDetailPage />} />
+          <Route path="/personalize/:id" element={<PersonalizePage />} />
           <Route path="/category/:category" element={<CategoryPage />} />
           <Route path="/custom" element={<CustomPage />} />
           <Route path="/cart" element={<CartPage />} />
@@ -73,6 +76,7 @@ export default function App() {
         <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
           <Route index element={<AdminDashboard />} />
           <Route path="homepage" element={<AdminHomepage />} />
+          <Route path="categories" element={<AdminCategories />} />
           <Route path="products" element={<AdminProducts />} />
           <Route path="orders" element={<AdminOrders />} />
           <Route path="custom-orders" element={<AdminCustomOrders />} />
