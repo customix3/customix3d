@@ -1,21 +1,24 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowUpRight, Sparkles } from 'lucide-react';
 import ProductCard from '@/components/ProductCard';
 import { CATEGORIES } from '@/data/demoProducts';
 import { useProducts } from '@/store/productsStore';
+import { subscribeHomepage, DEFAULT_HOME, type HomepageCms } from '@/services/homepageCms';
 
 export default function HomePage() {
   const products = useProducts((s) => s.products).filter((p) => p.active !== false);
   const bestsellers = products.slice(0, 4);
+  const [cms, setCms] = useState<HomepageCms>(DEFAULT_HOME);
+
+  useEffect(() => subscribeHomepage(setCms), []);
 
   return (
     <div className="overflow-x-hidden">
-      {/* HERO */}
-      <section className="relative grain isolate min-h-[88vh] overflow-hidden">
+      <section className="relative isolate min-h-[88vh] overflow-hidden grain">
         <div className="pointer-events-none absolute -left-24 top-20 h-72 w-72 rounded-full bg-brand-400/20 blur-3xl" />
         <div className="pointer-events-none absolute -right-16 bottom-10 h-80 w-80 rounded-full bg-mint-400/15 blur-3xl" />
-        <div className="pointer-events-none absolute left-1/2 top-1/3 h-40 w-40 -translate-x-1/2 rounded-full border border-ink-900/5" />
 
         <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 pb-16 pt-12 md:grid-cols-12 md:gap-8 md:pt-20">
           <motion.div
@@ -26,25 +29,23 @@ export default function HomePage() {
           >
             <span className="chip mb-5 inline-flex gap-1.5">
               <Sparkles className="h-3.5 w-3.5 text-brand-500" />
-              Miniature collectibles
+              {cms.badge}
             </span>
             <h1 className="font-display text-[2.6rem] font-extrabold leading-[1.05] tracking-tight text-ink-900 sm:text-5xl md:text-6xl lg:text-7xl">
-              Tiny worlds.
+              {cms.headline1}
               <br />
               <span className="bg-gradient-to-r from-brand-500 via-brand-400 to-mint-500 bg-clip-text text-transparent">
-                Huge presence.
+                {cms.headline2}
               </span>
             </h1>
-            <p className="mt-5 max-w-md text-base leading-relaxed text-ink-600 sm:text-lg">
-              Desk icons, shelf heroes, custom keepsakes — crafted like art, priced for everyday magic.
-            </p>
+            <p className="mt-5 max-w-md text-base leading-relaxed text-ink-600 sm:text-lg">{cms.subtitle}</p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link to="/products" className="btn-primary">
-                Explore collection
+                {cms.ctaPrimary}
                 <ArrowUpRight className="h-4 w-4" />
               </Link>
               <Link to="/custom" className="btn-secondary">
-                Make it custom
+                {cms.ctaSecondary}
               </Link>
             </div>
             <div className="mt-10 flex flex-wrap gap-6 text-sm text-ink-500">
@@ -67,15 +68,15 @@ export default function HomePage() {
 
           <motion.div
             className="relative md:col-span-5"
-            initial={{ opacity: 0, scale: 0.92, rotate: -2 }}
-            animate={{ opacity: 1, scale: 1, rotate: 0 }}
-            transition={{ duration: 0.7, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
+            initial={{ opacity: 0, scale: 0.92 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.7, delay: 0.12 }}
           >
             <div className="absolute -inset-4 rounded-[2rem] bg-gradient-to-br from-brand-400/30 via-transparent to-mint-400/20 blur-2xl" />
             <div className="relative overflow-hidden rounded-[2rem] border border-ink-900/5 bg-ink-900 shadow-soft">
               <img
-                src="https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=900&q=80"
-                alt="Miniature collectible"
+                src={cms.heroImage}
+                alt="Miniature"
                 className="aspect-[4/5] w-full object-cover opacity-95"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-ink-900/80 via-transparent to-transparent" />
@@ -88,25 +89,14 @@ export default function HomePage() {
                 <p className="mt-1 font-display text-lg font-bold text-white">New miniatures weekly</p>
               </motion.div>
             </div>
-            <motion.div
-              className="absolute -left-4 top-10 rounded-2xl border border-ink-900/5 bg-white px-4 py-3 shadow-card sm:-left-8"
-              animate={{ y: [0, 10, 0] }}
-              transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
-            >
-              <p className="text-[10px] font-bold uppercase tracking-wider text-brand-500">From</p>
-              <p className="font-display text-xl font-bold">₹199</p>
-            </motion.div>
           </motion.div>
         </div>
       </section>
 
-      {/* CATEGORIES */}
       <section className="mx-auto max-w-7xl px-4 py-14">
-        <div className="mb-8 flex items-end justify-between gap-4">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-500">Worlds</p>
-            <h2 className="font-display mt-1 text-3xl font-bold tracking-tight sm:text-4xl">Pick a shelf</h2>
-          </div>
+        <div className="mb-8">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-500">Worlds</p>
+          <h2 className="font-display mt-1 text-3xl font-bold tracking-tight sm:text-4xl">Pick a shelf</h2>
         </div>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-5 md:gap-4">
           {CATEGORIES.map((c, i) => (
@@ -136,17 +126,13 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* BESTSELLERS */}
       <section className="mx-auto max-w-7xl px-4 py-10">
         <div className="mb-8 flex items-end justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-500">Heat</p>
             <h2 className="font-display mt-1 text-3xl font-bold tracking-tight">Shelf favourites</h2>
           </div>
-          <Link
-            to="/products"
-            className="text-sm font-semibold text-ink-600 underline-offset-4 hover:text-brand-600 hover:underline"
-          >
+          <Link to="/products" className="text-sm font-semibold text-ink-600 hover:text-brand-600">
             View all
           </Link>
         </div>
@@ -157,38 +143,28 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* CUSTOM BAND */}
       <section className="relative my-16 overflow-hidden">
         <div className="mx-auto max-w-7xl px-4">
           <div className="relative overflow-hidden rounded-[2rem] bg-ink-900 px-6 py-14 text-center sm:px-12 sm:py-20">
             <div className="pointer-events-none absolute -left-10 top-0 h-40 w-40 rounded-full bg-brand-500/30 blur-3xl" />
             <div className="pointer-events-none absolute -right-10 bottom-0 h-48 w-48 rounded-full bg-mint-400/20 blur-3xl" />
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+            <p className="text-xs font-bold uppercase tracking-[0.25em] text-brand-300">One of one</p>
+            <h2 className="font-display mx-auto mt-3 max-w-xl text-3xl font-extrabold text-white sm:text-5xl">
+              {cms.customTitle}
+            </h2>
+            <p className="mx-auto mt-4 max-w-md text-sm text-white/60 sm:text-base">{cms.customSubtitle}</p>
+            <Link
+              to="/custom"
+              className="mt-8 inline-flex items-center gap-2 rounded-full bg-white px-7 py-3.5 text-sm font-bold text-ink-900 transition hover:bg-brand-400 hover:text-white"
             >
-              <p className="text-xs font-bold uppercase tracking-[0.25em] text-brand-300">One of one</p>
-              <h2 className="font-display mx-auto mt-3 max-w-xl text-3xl font-extrabold text-white sm:text-5xl">
-                Your idea. Our craft. Your shelf.
-              </h2>
-              <p className="mx-auto mt-4 max-w-md text-sm text-white/60 sm:text-base">
-                Message a concept on WhatsApp — we quote, refine, and deliver a miniature that feels personal.
-              </p>
-              <Link
-                to="/custom"
-                className="mt-8 inline-flex items-center gap-2 rounded-full bg-white px-7 py-3.5 text-sm font-bold text-ink-900 transition hover:bg-brand-400 hover:text-white"
-              >
-                Start a custom piece
-                <ArrowUpRight className="h-4 w-4" />
-              </Link>
-            </motion.div>
+              Start a custom piece
+              <ArrowUpRight className="h-4 w-4" />
+            </Link>
           </div>
         </div>
       </section>
 
-      {/* GRID */}
-      <section className="mx-auto max-w-7xl px-4 pb-20">
+      <section className="mx-auto max-w-7xl px-4 pb-24">
         <div className="mb-8">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-500">Full shelf</p>
           <h2 className="font-display mt-1 text-3xl font-bold tracking-tight">Everything live</h2>

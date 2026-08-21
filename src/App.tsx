@@ -30,6 +30,7 @@ import AdminCustomers from './admin/AdminCustomers';
 import AdminOffers from './admin/AdminOffers';
 import AdminReviews from './admin/AdminReviews';
 import AdminSettings from './admin/AdminSettings';
+import AdminHomepage from './admin/AdminHomepage';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
 import { useSite } from './context/SiteContext';
@@ -71,6 +72,7 @@ export default function App() {
         <Route path="/admin/login" element={<AdminLoginPage />} />
         <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
           <Route index element={<AdminDashboard />} />
+          <Route path="homepage" element={<AdminHomepage />} />
           <Route path="products" element={<AdminProducts />} />
           <Route path="orders" element={<AdminOrders />} />
           <Route path="custom-orders" element={<AdminCustomOrders />} />

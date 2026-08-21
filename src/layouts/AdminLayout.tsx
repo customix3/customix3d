@@ -11,6 +11,7 @@ import {
   Star,
   Menu,
   X,
+  LayoutTemplate,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useSite } from '@/context/SiteContext';
@@ -18,6 +19,7 @@ import AdminOrderAlerts from '@/admin/AdminOrderAlerts';
 
 const links = [
   { to: '/admin', end: true, label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/admin/homepage', label: 'Homepage', icon: LayoutTemplate },
   { to: '/admin/products', label: 'Products', icon: Package },
   { to: '/admin/orders', label: 'Orders', icon: ShoppingBag },
   { to: '/admin/custom-orders', label: 'Custom', icon: FileBox },
@@ -47,7 +49,7 @@ export default function AdminLayout() {
     <>
       <div className="border-b border-cream-200 p-4">
         <Link to="/admin" className="font-display text-lg font-bold">
-          CUSTO<span className="text-brand-600">MIX</span>
+          CUSTO<span className="text-brand-500">MIX</span>
         </Link>
         <p className="mt-0.5 text-xs text-ink-500">Admin</p>
       </div>
@@ -96,21 +98,17 @@ export default function AdminLayout() {
           type="button"
           className="flex h-10 w-10 items-center justify-center rounded-xl hover:bg-cream-100"
           onClick={() => setMenuOpen((v) => !v)}
-          aria-label="Menu"
         >
           {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
         <span className="font-display font-bold">
-          CUSTO<span className="text-brand-600">MIX</span> Admin
+          CUSTO<span className="text-brand-500">MIX</span> Admin
         </span>
       </div>
 
       {menuOpen && (
         <>
-          <div
-            className="fixed inset-0 z-40 bg-black/40 md:hidden"
-            onClick={() => setMenuOpen(false)}
-          />
+          <div className="fixed inset-0 z-40 bg-black/40 md:hidden" onClick={() => setMenuOpen(false)} />
           <aside className="fixed left-0 top-0 z-50 flex h-full w-64 flex-col bg-white shadow-xl md:hidden">
             {Sidebar}
           </aside>
@@ -125,7 +123,6 @@ export default function AdminLayout() {
         <Outlet />
       </main>
 
-      {/* Loud siren + browser notification when new order / custom arrives */}
       <AdminOrderAlerts />
     </div>
   );
