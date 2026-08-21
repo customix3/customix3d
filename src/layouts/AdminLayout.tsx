@@ -12,6 +12,7 @@ import {
   Menu,
   X,
   LayoutTemplate,
+  FolderOpen,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useSite } from '@/context/SiteContext';
@@ -19,7 +20,8 @@ import AdminOrderAlerts from '@/admin/AdminOrderAlerts';
 
 const links = [
   { to: '/admin', end: true, label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/admin/homepage', label: 'Homepage', icon: LayoutTemplate },
+  { to: '/admin/homepage', label: 'Page layout', icon: LayoutTemplate },
+  { to: '/admin/categories', label: 'Categories', icon: FolderOpen },
   { to: '/admin/products', label: 'Products', icon: Package },
   { to: '/admin/orders', label: 'Orders', icon: ShoppingBag },
   { to: '/admin/custom-orders', label: 'Custom', icon: FileBox },
