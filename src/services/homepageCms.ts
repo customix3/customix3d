@@ -1,6 +1,14 @@
 import { doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/firebase/config';
 
+export type HomeSectionId =
+  | 'hero'
+  | 'ticker'
+  | 'categories'
+  | 'featured'
+  | 'customBand'
+  | 'liveOrders';
+
 export type HomepageCms = {
   badge: string;
   headline1: string;
@@ -12,7 +20,19 @@ export type HomepageCms = {
   customTitle: string;
   customSubtitle: string;
   showLiveOrders: boolean;
+  sectionOrder: HomeSectionId[];
+  hiddenSections: HomeSectionId[];
+  featuredProductIds: string[];
 };
+
+export const DEFAULT_SECTION_ORDER: HomeSectionId[] = [
+  'hero',
+  'ticker',
+  'categories',
+  'featured',
+  'customBand',
+  'liveOrders',
+];
 
 export const DEFAULT_HOME: HomepageCms = {
   badge: 'Miniature collectibles',
@@ -27,7 +47,37 @@ export const DEFAULT_HOME: HomepageCms = {
   customSubtitle:
     'Message a concept on WhatsApp — we quote, refine, and deliver a miniature that feels personal.',
   showLiveOrders: true,
+  sectionOrder: [...DEFAULT_SECTION_ORDER],
+  hiddenSections: [],
+  featuredProductIds: [],
 };
+
+function mergeHome(d: Record<string, unknown>): HomepageCms {
+  const order = Array.isArray(d.sectionOrder)
+    ? (d.sectionOrder as HomeSectionId[])
+    : DEFAULT_HOME.sectionOrder;
+  const hidden = Array.isArray(d.hiddenSections)
+    ? (d.hiddenSections as HomeSectionId[])
+    : [];
+  const featured = Array.isArray(d.featuredProductIds)
+    ? (d.featuredProductIds as string[]).map(String)
+    : [];
+  return {
+    badge: String(d.badge ?? DEFAULT_HOME.badge),
+    headline1: String(d.headline1 ?? DEFAULT_HOME.headline1),
+    headline2: String(d.headline2 ?? DEFAULT_HOME.headline2),
+    subtitle: String(d.subtitle ?? DEFAULT_HOME.subtitle),
+    ctaPrimary: String(d.ctaPrimary ?? DEFAULT_HOME.ctaPrimary),
+    ctaSecondary: String(d.ctaSecondary ?? DEFAULT_HOME.ctaSecondary),
+    heroImage: String(d.heroImage ?? DEFAULT_HOME.heroImage),
+    customTitle: String(d.customTitle ?? DEFAULT_HOME.customTitle),
+    customSubtitle: String(d.customSubtitle ?? DEFAULT_HOME.customSubtitle),
+    showLiveOrders: d.showLiveOrders !== false,
+    sectionOrder: order.length ? order : [...DEFAULT_SECTION_ORDER],
+    hiddenSections: hidden,
+    featuredProductIds: featured,
+  };
+}
 
 export function subscribeHomepage(onData: (h: HomepageCms) => void) {
   if (!db) {
@@ -36,21 +86,7 @@ export function subscribeHomepage(onData: (h: HomepageCms) => void) {
   }
   return onSnapshot(
     doc(db, 'settings', 'homepage'),
-    (snap) => {
-      const d = snap.data() || {};
-      onData({
-        badge: d.badge ?? DEFAULT_HOME.badge,
-        headline1: d.headline1 ?? DEFAULT_HOME.headline1,
-        headline2: d.headline2 ?? DEFAULT_HOME.headline2,
-        subtitle: d.subtitle ?? DEFAULT_HOME.subtitle,
-        ctaPrimary: d.ctaPrimary ?? DEFAULT_HOME.ctaPrimary,
-        ctaSecondary: d.ctaSecondary ?? DEFAULT_HOME.ctaSecondary,
-        heroImage: d.heroImage ?? DEFAULT_HOME.heroImage,
-        customTitle: d.customTitle ?? DEFAULT_HOME.customTitle,
-        customSubtitle: d.customSubtitle ?? DEFAULT_HOME.customSubtitle,
-        showLiveOrders: d.showLiveOrders !== false,
-      });
-    },
+    (snap) => onData(mergeHome((snap.data() || {}) as Record<string, unknown>)),
     () => onData(DEFAULT_HOME)
   );
 }
