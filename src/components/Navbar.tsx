@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { ShoppingBag, User, Menu, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { CATEGORIES } from '@/data/demoProducts';
@@ -44,7 +45,6 @@ export default function Navbar() {
           CUSTO<span className="text-brand-600">MIX</span>3D
         </Link>
 
-        {/* Desktop search with recommendations */}
         <SearchBox className="mx-4 hidden min-w-0 flex-1 max-w-md md:block" />
 
         <div className="flex-1 md:hidden" />
@@ -63,11 +63,19 @@ export default function Navbar() {
             aria-label="Cart"
           >
             <ShoppingBag className="h-5 w-5" />
-            {count > 0 && (
-              <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-500 px-1 text-[10px] font-bold text-white">
-                {count > 99 ? '99+' : count}
-              </span>
-            )}
+            <AnimatePresence>
+              {count > 0 && (
+                <motion.span
+                  key={count}
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  exit={{ scale: 0 }}
+                  className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-500 px-1 text-[10px] font-bold text-white"
+                >
+                  {count > 99 ? '99+' : count}
+                </motion.span>
+              )}
+            </AnimatePresence>
           </Link>
         </div>
       </div>
