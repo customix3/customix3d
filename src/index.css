@@ -29,10 +29,10 @@
     @apply overflow-hidden rounded-3xl border border-ink-900/5 bg-white/90 shadow-card backdrop-blur-sm;
   }
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-full bg-ink-900 px-6 py-3 text-sm font-semibold text-white shadow-soft transition hover:bg-brand-500 hover:shadow-glow;
+    @apply relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-ink-900 px-6 py-3 text-sm font-semibold text-white shadow-soft transition-all duration-300 hover:bg-brand-500 hover:shadow-glow;
   }
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-full border-2 border-ink-900/10 bg-white/80 px-6 py-3 text-sm font-semibold text-ink-900 backdrop-blur transition hover:border-brand-500 hover:text-brand-600;
+    @apply inline-flex items-center justify-center gap-2 rounded-full border-2 border-ink-900/10 bg-white/80 px-6 py-3 text-sm font-semibold text-ink-900 backdrop-blur transition-all duration-300 hover:border-brand-500 hover:text-brand-600;
   }
   .input {
     @apply w-full rounded-2xl border border-ink-900/10 bg-white px-4 py-3 text-ink-900 placeholder:text-ink-500 transition focus:border-brand-400 focus:outline-none focus:ring-4 focus:ring-brand-500/15;
@@ -41,7 +41,7 @@
     @apply animate-pulse rounded-2xl bg-cream-200;
   }
   .chip {
-    @apply inline-flex items-center rounded-full border border-ink-900/10 bg-white/70 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-ink-600 backdrop-blur;
+    @apply inline-flex items-center rounded-full border border-ink-900/10 bg-white/70 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-ink-600 backdrop-blur transition-all duration-250;
   }
 }
 
@@ -83,6 +83,39 @@
   inset: 0;
   background: linear-gradient(to bottom, transparent, rgba(240, 90, 26, 0.15), transparent);
   animation: layer-scan 3.5s ease-in-out infinite;
+}
+
+/* Creative button shine + lift */
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.55s ease;
+}
+.btn-primary:hover::before {
+  transform: translateX(100%);
+}
+.btn-primary:hover {
+  transform: translateY(-2px) scale(1.03);
+}
+.btn-primary:active {
+  transform: translateY(0) scale(0.98);
+}
+.btn-secondary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px -10px rgba(240, 90, 26, 0.25);
+}
+.chip:hover {
+  border-color: rgba(240, 90, 26, 0.35);
+  color: #d9430f;
+  transform: translateY(-1px);
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
 }
 
 .table-wrap {
