@@ -14,6 +14,17 @@ export default function HomePage() {
 
   useEffect(() => subscribeHomepage(setCms), []);
 
+  const quotes = [
+    '🔥 Your shelf is about to get an attitude adjustment',
+    '🧠 Printed layer by layer. Just like good decisions.',
+    '👀 Mass production left on read',
+    '💅 One of one. Zero of boring.',
+    '⚠️ May cause sudden upgrades to your entire desk',
+    '📞 Your desk called. It wants better friends.',
+    '✨ Not for the basic shelf',
+    '🏭 Factory made is for people who fear uniqueness',
+  ];
+
   return (
     <div className="overflow-x-hidden">
       <section className="relative isolate min-h-[88vh] overflow-hidden grain">
@@ -101,6 +112,17 @@ export default function HomePage() {
               </motion.div>
             </div>
           </motion.div>
+        </div>
+      </section>
+
+      {/* Sarcastic meme marquee */}
+      <section className="overflow-hidden border-y border-ink-900/5 bg-ink-900 py-3">
+        <div className="flex animate-[marquee_28s_linear_infinite] whitespace-nowrap">
+          {[...quotes, ...quotes].map((q, i) => (
+            <span key={i} className="mx-8 text-sm font-semibold text-white/80">
+              {q}
+            </span>
+          ))}
         </div>
       </section>
 
