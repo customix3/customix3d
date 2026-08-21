@@ -4,8 +4,6 @@ import { motion } from 'framer-motion';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { openRazorpayCheckout } from '@/services/paymentService';
-import { UPI_CONFIG } from '@/services/upiConfig';
-import PaymentWaitingScreen from '@/components/PaymentWaitingScreen';
 import { useOrders } from '@/store/ordersStore';
 import { subscribeOffers, type Offer } from '@/services/firestoreAdmin';
 import PhoneInput, { splitPhone } from '@/components/PhoneInput';
@@ -43,9 +41,6 @@ export default function CheckoutPage() {
     state: 'Maharashtra',
     pincode: '',
   });
-  const [paymentMethod, setPaymentMethod] = useState<'upi' | 'razorpay'>('upi');
-  const [utr, setUtr] = useState('');
-  const [paidAmount, setPaidAmount] = useState(0);
 
   useEffect(() => subscribeOffers(setOffers), []);
 
@@ -78,11 +73,10 @@ export default function CheckoutPage() {
   }, [user]);
 
   useEffect(() => {
-    // Only auto-redirect for instant Razorpay success — UPI waits on confirmation screen
-    if (!done || !orderId || paymentMethod === 'upi') return;
+    if (!done || !orderId) return;
     const t = setTimeout(() => navigate(`/orders/${orderId}`, { replace: true }), 3200);
     return () => clearTimeout(t);
-  }, [done, orderId, navigate, paymentMethod]);
+  }, [done, orderId, navigate]);
 
   const pickAddress = (id: string) => {
     setSelectedAddrId(id);
@@ -143,17 +137,6 @@ export default function CheckoutPage() {
   }
 
   if (done) {
-    // UPI: live waiting screen with 3-min timer until admin confirms
-    if (paymentMethod === 'upi') {
-      return (
-        <PaymentWaitingScreen
-          orderId={orderId}
-          utr={paymentId}
-          amount={paidAmount || amount}
-        />
-      );
-    }
-    // Razorpay: instant success
     return (
       <div className="mx-auto flex min-h-[70vh] max-w-md flex-col items-center justify-center px-4 py-16 text-center">
         <motion.div
@@ -198,36 +181,18 @@ export default function CheckoutPage() {
       setError(addrErr);
       return;
     }
-
-    if (paymentMethod === 'upi') {
-      const cleanUtr = utr.replace(/\s/g, '');
-      if (cleanUtr.length < 8) {
-        setError('Enter the UTR / Transaction ID after paying via UPI');
-        return;
-      }
-    }
-
     setLoading(true);
     try {
-      let payId = '';
-      let rzpOrder = '';
-      let orderStatus: 'Pending' | 'Paid' = 'Paid';
+      const payment = await openRazorpayCheckout({
+        amountRupees: amount,
+        customerName: form.name,
+        customerEmail: form.email,
+        customerPhone: form.whatsapp,
+        description: `CustoMix3D order · ${items.length} item(s)`,
+      });
 
-      if (paymentMethod === 'razorpay') {
-        const payment = await openRazorpayCheckout({
-          amountRupees: amount,
-          customerName: form.name,
-          customerEmail: form.email,
-          customerPhone: form.whatsapp,
-          description: `CustoMix3D order · ${items.length} item(s)`,
-        });
-        payId = payment.razorpay_payment_id ? String(payment.razorpay_payment_id) : '';
-        rzpOrder = payment.razorpay_order_id ? String(payment.razorpay_order_id) : '';
-        orderStatus = 'Paid';
-      } else {
-        payId = utr.replace(/\s/g, '').toUpperCase();
-        orderStatus = 'Pending';
-      }
+      const payId = payment.razorpay_payment_id ? String(payment.razorpay_payment_id) : '';
+      const rzpOrder = payment.razorpay_order_id ? String(payment.razorpay_order_id) : '';
 
       const orderPayload: Parameters<typeof addOrder>[0] = {
         customerName: form.name,
@@ -244,7 +209,7 @@ export default function CheckoutPage() {
           ...(i.image ? { image: i.image } : {}),
         })),
         total: amount,
-        status: orderStatus,
+        status: 'Paid',
       };
       if (payId) orderPayload.paymentId = payId;
       if (rzpOrder) orderPayload.razorpayOrderId = rzpOrder;
@@ -267,7 +232,6 @@ export default function CheckoutPage() {
         }
       }
 
-      setPaidAmount(amount);
       clear();
       setOrderId(order.id);
       setPaymentId(payId);
@@ -430,76 +394,7 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        <div className="space-y-6 lg:col-span-2">
-          <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm sm:p-6">
-            <h2 className="mb-4 font-semibold">Payment method</h2>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={() => setPaymentMethod('upi')}
-                className={`rounded-xl border-2 px-4 py-3 text-left text-sm font-semibold transition ${
-                  paymentMethod === 'upi'
-                    ? 'border-brand-500 bg-brand-50 text-brand-700'
-                    : 'border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                <span className="block">UPI / QR</span>
-                <span className="mt-0.5 block text-xs font-normal text-slate-500">
-                  Pay & enter UTR (temporary)
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setPaymentMethod('razorpay')}
-                className={`rounded-xl border-2 px-4 py-3 text-left text-sm font-semibold transition ${
-                  paymentMethod === 'razorpay'
-                    ? 'border-brand-500 bg-brand-50 text-brand-700'
-                    : 'border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                <span className="block">Razorpay</span>
-                <span className="mt-0.5 block text-xs font-normal text-slate-500">
-                  Card / UPI / Netbanking (demo)
-                </span>
-              </button>
-            </div>
-
-            {paymentMethod === 'upi' && (
-              <div className="mt-5 space-y-4 rounded-xl border border-dashed border-brand-200 bg-brand-50/50 p-4">
-                <p className="text-sm font-medium text-ink-800">
-                  Pay ₹{amount} to this UPI ID
-                </p>
-                <div className="flex flex-wrap items-center gap-2">
-                  <code className="rounded-lg bg-white px-3 py-2 font-mono text-sm font-bold text-brand-700 shadow-sm">
-                    {UPI_CONFIG.upiId}
-                  </code>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard?.writeText(UPI_CONFIG.upiId);
-                    }}
-                    className="rounded-lg bg-ink-900 px-3 py-2 text-xs font-semibold text-white"
-                  >
-                    Copy
-                  </button>
-                </div>
-                <p className="text-xs text-slate-500">
-                  Open any UPI app → Pay to the ID above → copy the UTR / Transaction ID and paste below.
-                </p>
-                <div>
-                  <label className="text-sm font-medium">UTR / Transaction ID *</label>
-                  <input
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-mono text-sm tracking-wide"
-                    placeholder="e.g. 123456789012"
-                    value={utr}
-                    onChange={(e) => setUtr(e.target.value)}
-                    required={paymentMethod === 'upi'}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
+        <div className="lg:col-span-2">
           <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm sm:p-6 lg:sticky lg:top-20">
             <h2 className="mb-4 font-semibold">Order summary</h2>
             <ul className="space-y-3 text-sm">
@@ -559,14 +454,11 @@ export default function CheckoutPage() {
               disabled={loading}
               className="mt-4 w-full rounded-full bg-slate-900 py-3.5 text-sm font-semibold text-white disabled:opacity-60"
             >
-              {loading
-                ? paymentMethod === 'upi'
-                  ? 'Placing order…'
-                  : 'Opening payment…'
-                : paymentMethod === 'upi'
-                  ? `I have paid ₹${amount}`
-                  : `Pay ₹${amount}`}
+              {loading ? 'Opening payment…' : `Pay ₹${amount}`}
             </button>
+            <p className="mt-3 text-center text-[11px] text-slate-400">
+              Secure payment via Razorpay
+            </p>
           </div>
         </div>
       </form>
