@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { ArrowUpRight, Sparkles } from 'lucide-react';
 import ProductCard from '@/components/ProductCard';
 import { CATEGORIES } from '@/data/demoProducts';
 import { useProducts } from '@/store/productsStore';
@@ -10,107 +11,189 @@ export default function HomePage() {
 
   return (
     <div className="overflow-x-hidden">
-      <section className="relative bg-gradient-to-b from-cream-100 to-cream-50">
-        <div className="mx-auto grid max-w-7xl items-center gap-8 px-4 py-10 sm:gap-12 sm:py-16 md:grid-cols-2 md:py-24">
+      {/* HERO */}
+      <section className="relative grain isolate min-h-[88vh] overflow-hidden">
+        <div className="pointer-events-none absolute -left-24 top-20 h-72 w-72 rounded-full bg-brand-400/20 blur-3xl" />
+        <div className="pointer-events-none absolute -right-16 bottom-10 h-80 w-80 rounded-full bg-mint-400/15 blur-3xl" />
+        <div className="pointer-events-none absolute left-1/2 top-1/3 h-40 w-40 -translate-x-1/2 rounded-full border border-ink-900/5" />
+
+        <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 pb-16 pt-12 md:grid-cols-12 md:gap-8 md:pt-20">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            className="md:col-span-7"
+            initial={{ opacity: 0, y: 28 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
           >
-            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-brand-600 sm:mb-3 sm:text-sm">
-              Premium 3D Prints
-            </p>
-            <h1 className="font-display text-3xl font-bold leading-tight text-ink-900 sm:text-4xl md:text-5xl">
-              Custom & ready-made prints that stand out
+            <span className="chip mb-5 inline-flex gap-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-brand-500" />
+              Miniature collectibles
+            </span>
+            <h1 className="font-display text-[2.6rem] font-extrabold leading-[1.05] tracking-tight text-ink-900 sm:text-5xl md:text-6xl lg:text-7xl">
+              Tiny worlds.
+              <br />
+              <span className="bg-gradient-to-r from-brand-500 via-brand-400 to-mint-500 bg-clip-text text-transparent">
+                Huge presence.
+              </span>
             </h1>
-            <p className="mt-3 max-w-md text-base text-ink-600 sm:mt-4 sm:text-lg">
-              Miniatures, home decor, desk gadgets — designed and printed with care.
+            <p className="mt-5 max-w-md text-base leading-relaxed text-ink-600 sm:text-lg">
+              Desk icons, shelf heroes, custom keepsakes — crafted like art, priced for everyday magic.
             </p>
-            <div className="mt-6 flex flex-wrap gap-3 sm:mt-8">
+            <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link to="/products" className="btn-primary">
-                Shop collection
+                Explore collection
+                <ArrowUpRight className="h-4 w-4" />
               </Link>
               <Link to="/custom" className="btn-secondary">
-                Custom order
+                Make it custom
               </Link>
             </div>
+            <div className="mt-10 flex flex-wrap gap-6 text-sm text-ink-500">
+              <div>
+                <p className="font-display text-2xl font-bold text-ink-900">{products.length}+</p>
+                <p>pieces live</p>
+              </div>
+              <div className="h-10 w-px bg-ink-900/10" />
+              <div>
+                <p className="font-display text-2xl font-bold text-ink-900">Hand</p>
+                <p>finished detail</p>
+              </div>
+              <div className="h-10 w-px bg-ink-900/10" />
+              <div>
+                <p className="font-display text-2xl font-bold text-ink-900">WA</p>
+                <p>custom quotes</p>
+              </div>
+            </div>
           </motion.div>
+
           <motion.div
-            className="relative mx-auto w-full max-w-md md:max-w-none"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
+            className="relative md:col-span-5"
+            initial={{ opacity: 0, scale: 0.92, rotate: -2 }}
+            animate={{ opacity: 1, scale: 1, rotate: 0 }}
+            transition={{ duration: 0.7, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
           >
-            <div className="aspect-square overflow-hidden rounded-2xl bg-cream-200 shadow-soft sm:rounded-3xl">
+            <div className="absolute -inset-4 rounded-[2rem] bg-gradient-to-br from-brand-400/30 via-transparent to-mint-400/20 blur-2xl" />
+            <div className="relative overflow-hidden rounded-[2rem] border border-ink-900/5 bg-ink-900 shadow-soft">
               <img
                 src="https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=900&q=80"
-                alt="3D printed miniatures"
-                className="h-full w-full object-cover"
+                alt="Miniature collectible"
+                className="aspect-[4/5] w-full object-cover opacity-95"
               />
+              <div className="absolute inset-0 bg-gradient-to-t from-ink-900/80 via-transparent to-transparent" />
+              <motion.div
+                className="absolute bottom-5 left-5 right-5 rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-md"
+                animate={{ y: [0, -6, 0] }}
+                transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
+              >
+                <p className="text-xs font-semibold uppercase tracking-widest text-white/70">Shelf drop</p>
+                <p className="mt-1 font-display text-lg font-bold text-white">New miniatures weekly</p>
+              </motion.div>
             </div>
+            <motion.div
+              className="absolute -left-4 top-10 rounded-2xl border border-ink-900/5 bg-white px-4 py-3 shadow-card sm:-left-8"
+              animate={{ y: [0, 10, 0] }}
+              transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
+            >
+              <p className="text-[10px] font-bold uppercase tracking-wider text-brand-500">From</p>
+              <p className="font-display text-xl font-bold">₹199</p>
+            </motion.div>
           </motion.div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-10 sm:py-14">
-        <h2 className="mb-6 text-center font-display text-xl font-bold sm:mb-8 sm:text-2xl">
-          Shop by category
-        </h2>
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-5">
+      {/* CATEGORIES */}
+      <section className="mx-auto max-w-7xl px-4 py-14">
+        <div className="mb-8 flex items-end justify-between gap-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-500">Worlds</p>
+            <h2 className="font-display mt-1 text-3xl font-bold tracking-tight sm:text-4xl">Pick a shelf</h2>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-5 md:gap-4">
           {CATEGORIES.map((c, i) => (
             <Link key={c.slug} to={`/category/${c.slug}`} className="group">
               <motion.div
-                initial={{ opacity: 0, y: 12 }}
+                initial={{ opacity: 0, y: 16 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.05 }}
-                className="card overflow-hidden"
+                transition={{ delay: i * 0.06 }}
+                whileHover={{ y: -6 }}
+                className="relative overflow-hidden rounded-3xl border border-ink-900/5 bg-ink-900"
               >
-                <div className="aspect-square overflow-hidden">
+                <div className="aspect-[3/4] overflow-hidden">
                   <img
                     src={c.image}
                     alt={c.name}
-                    className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                    className="h-full w-full object-cover opacity-80 transition duration-700 group-hover:scale-110 group-hover:opacity-100"
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-ink-900 via-ink-900/20 to-transparent" />
                 </div>
-                <p className="p-2 text-center text-xs font-medium sm:p-3 sm:text-sm">{c.name}</p>
+                <p className="absolute bottom-0 left-0 right-0 p-3 font-display text-sm font-bold text-white sm:p-4 sm:text-base">
+                  {c.name}
+                </p>
               </motion.div>
             </Link>
           ))}
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-8 sm:py-10">
-        <div className="mb-6 flex items-end justify-between sm:mb-8">
-          <h2 className="font-display text-xl font-bold sm:text-2xl">Bestsellers</h2>
-          <Link to="/products" className="text-sm font-medium text-brand-600 hover:text-brand-700">
+      {/* BESTSELLERS */}
+      <section className="mx-auto max-w-7xl px-4 py-10">
+        <div className="mb-8 flex items-end justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-500">Heat</p>
+            <h2 className="font-display mt-1 text-3xl font-bold tracking-tight">Shelf favourites</h2>
+          </div>
+          <Link
+            to="/products"
+            className="text-sm font-semibold text-ink-600 underline-offset-4 hover:text-brand-600 hover:underline"
+          >
             View all
           </Link>
         </div>
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 md:gap-6">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-6">
           {bestsellers.map((p, i) => (
             <ProductCard key={p.id} product={p} index={i} />
           ))}
         </div>
       </section>
 
-      <section className="my-10 bg-ink-900 text-white sm:my-16">
-        <div className="mx-auto max-w-7xl px-4 py-12 text-center sm:py-16">
-          <h2 className="mb-3 font-display text-2xl font-bold sm:mb-4 sm:text-3xl">
-            Got a design? We will print it.
-          </h2>
-          <p className="mx-auto mb-6 max-w-lg text-sm text-white/70 sm:mb-8 sm:text-base">
-            Upload STL or OBJ files and get a custom quote. Quality materials, careful finishing.
-          </p>
-          <Link to="/custom" className="btn-primary bg-white text-ink-900 hover:bg-cream-100">
-            Start custom order
-          </Link>
+      {/* CUSTOM BAND */}
+      <section className="relative my-16 overflow-hidden">
+        <div className="mx-auto max-w-7xl px-4">
+          <div className="relative overflow-hidden rounded-[2rem] bg-ink-900 px-6 py-14 text-center sm:px-12 sm:py-20">
+            <div className="pointer-events-none absolute -left-10 top-0 h-40 w-40 rounded-full bg-brand-500/30 blur-3xl" />
+            <div className="pointer-events-none absolute -right-10 bottom-0 h-48 w-48 rounded-full bg-mint-400/20 blur-3xl" />
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+            >
+              <p className="text-xs font-bold uppercase tracking-[0.25em] text-brand-300">One of one</p>
+              <h2 className="font-display mx-auto mt-3 max-w-xl text-3xl font-extrabold text-white sm:text-5xl">
+                Your idea. Our craft. Your shelf.
+              </h2>
+              <p className="mx-auto mt-4 max-w-md text-sm text-white/60 sm:text-base">
+                Message a concept on WhatsApp — we quote, refine, and deliver a miniature that feels personal.
+              </p>
+              <Link
+                to="/custom"
+                className="mt-8 inline-flex items-center gap-2 rounded-full bg-white px-7 py-3.5 text-sm font-bold text-ink-900 transition hover:bg-brand-400 hover:text-white"
+              >
+                Start a custom piece
+                <ArrowUpRight className="h-4 w-4" />
+              </Link>
+            </motion.div>
+          </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 pb-14 sm:pb-20">
-        <h2 className="mb-6 font-display text-xl font-bold sm:mb-8 sm:text-2xl">More to explore</h2>
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 md:gap-6">
+      {/* GRID */}
+      <section className="mx-auto max-w-7xl px-4 pb-20">
+        <div className="mb-8">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-500">Full shelf</p>
+          <h2 className="font-display mt-1 text-3xl font-bold tracking-tight">Everything live</h2>
+        </div>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-6">
           {products.map((p, i) => (
             <ProductCard key={p.id} product={p} index={i} />
           ))}

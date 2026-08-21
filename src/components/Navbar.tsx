@@ -26,41 +26,38 @@ export default function Navbar() {
   }, [open]);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-cream-200 bg-cream-50/95 backdrop-blur-md">
+    <header className="sticky top-0 z-50 border-b border-ink-900/5 bg-cream-50/80 backdrop-blur-xl">
       <div className="mx-auto flex h-14 max-w-7xl items-center gap-2 px-3 sm:h-16 sm:gap-4 sm:px-4">
         <button
           type="button"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl hover:bg-cream-200 md:hidden"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full hover:bg-ink-900/5 md:hidden"
           onClick={() => setOpen((v) => !v)}
-          aria-label={open ? 'Close menu' : 'Open menu'}
         >
           {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
 
         <Link
           to="/"
-          className="font-display text-base font-bold tracking-tight sm:text-xl md:mr-2"
+          className="font-display text-lg font-extrabold tracking-tight sm:text-xl"
           onClick={() => setOpen(false)}
         >
-          CUSTO<span className="text-brand-600">MIX</span>3D
+          CUSTO<span className="text-brand-500">MIX</span>
         </Link>
 
         <SearchBox className="mx-4 hidden min-w-0 flex-1 max-w-md md:block" />
 
         <div className="flex-1 md:hidden" />
 
-        <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
+        <div className="flex shrink-0 items-center gap-0.5">
           <Link
             to={user ? '/account' : '/login'}
-            className="flex h-10 w-10 items-center justify-center rounded-xl hover:bg-cream-200"
-            aria-label="Account"
+            className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-ink-900/5"
           >
             <User className="h-5 w-5" />
           </Link>
           <Link
             to="/cart"
-            className="relative flex h-10 w-10 items-center justify-center rounded-xl hover:bg-cream-200"
-            aria-label="Cart"
+            className="relative flex h-10 w-10 items-center justify-center rounded-full hover:bg-ink-900/5"
           >
             <ShoppingBag className="h-5 w-5" />
             <AnimatePresence>
@@ -69,7 +66,6 @@ export default function Navbar() {
                   key={count}
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  exit={{ scale: 0 }}
                   className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-500 px-1 text-[10px] font-bold text-white"
                 >
                   {count > 99 ? '99+' : count}
@@ -80,35 +76,28 @@ export default function Navbar() {
         </div>
       </div>
 
-      <nav className="mx-auto hidden max-w-7xl items-center justify-center gap-5 px-4 pb-3 text-sm font-medium text-ink-700 md:flex lg:gap-7">
+      <nav className="mx-auto hidden max-w-7xl items-center justify-center gap-6 px-4 pb-3 text-sm font-semibold text-ink-600 md:flex">
         {CATEGORIES.map((c) => (
-          <Link key={c.slug} to={`/category/${c.slug}`} className="transition hover:text-brand-600">
+          <Link key={c.slug} to={`/category/${c.slug}`} className="transition hover:text-brand-500">
             {c.name}
           </Link>
         ))}
-        <Link to="/custom" className="text-brand-600 hover:text-brand-700">
-          Custom Print
+        <Link to="/custom" className="text-brand-500">
+          Custom
         </Link>
       </nav>
 
-      <div className="border-t border-cream-200/80 md:hidden">
+      <div className="border-t border-ink-900/5 md:hidden">
         <div className="flex gap-2 overflow-x-auto px-3 py-2 scrollbar-none">
-          <Link to="/products" className="shrink-0 rounded-full bg-cream-100 px-3 py-1.5 text-xs font-medium">
+          <Link to="/products" className="chip shrink-0">
             All
           </Link>
           {CATEGORIES.map((c) => (
-            <Link
-              key={c.slug}
-              to={`/category/${c.slug}`}
-              className="shrink-0 whitespace-nowrap rounded-full bg-cream-100 px-3 py-1.5 text-xs font-medium"
-            >
+            <Link key={c.slug} to={`/category/${c.slug}`} className="chip shrink-0 whitespace-nowrap">
               {c.name}
             </Link>
           ))}
-          <Link
-            to="/custom"
-            className="shrink-0 whitespace-nowrap rounded-full bg-brand-50 px-3 py-1.5 text-xs font-medium text-brand-700"
-          >
+          <Link to="/custom" className="chip shrink-0 border-brand-200 bg-brand-50 text-brand-700">
             Custom
           </Link>
         </div>
@@ -116,25 +105,18 @@ export default function Navbar() {
 
       {open && (
         <>
-          <div
-            className="fixed inset-0 top-14 z-40 bg-black/40 md:hidden"
-            onClick={() => setOpen(false)}
-          />
-          <div className="fixed left-0 right-0 top-14 z-50 max-h-[calc(100dvh-3.5rem)] overflow-y-auto border-b border-cream-200 bg-white shadow-lg md:hidden">
+          <div className="fixed inset-0 top-14 z-40 bg-ink-900/40 md:hidden" onClick={() => setOpen(false)} />
+          <div className="fixed left-0 right-0 top-14 z-50 max-h-[calc(100dvh-3.5rem)] overflow-y-auto border-b border-ink-900/5 bg-cream-50 shadow-soft md:hidden">
             <div className="space-y-1 px-4 py-4">
               <SearchBox className="mb-3" onNavigate={() => setOpen(false)} />
-              <Link
-                to="/products"
-                className="block rounded-xl px-3 py-3 text-sm font-medium hover:bg-cream-100"
-                onClick={() => setOpen(false)}
-              >
+              <Link to="/products" className="block rounded-2xl px-3 py-3 text-sm font-semibold" onClick={() => setOpen(false)}>
                 All Products
               </Link>
               {CATEGORIES.map((c) => (
                 <Link
                   key={c.slug}
                   to={`/category/${c.slug}`}
-                  className="block rounded-xl px-3 py-3 text-sm font-medium hover:bg-cream-100"
+                  className="block rounded-2xl px-3 py-3 text-sm font-semibold"
                   onClick={() => setOpen(false)}
                 >
                   {c.name}
@@ -142,10 +124,10 @@ export default function Navbar() {
               ))}
               <Link
                 to="/custom"
-                className="block rounded-xl px-3 py-3 text-sm font-medium text-brand-600 hover:bg-brand-50"
+                className="block rounded-2xl px-3 py-3 text-sm font-semibold text-brand-500"
                 onClick={() => setOpen(false)}
               >
-                Custom Print
+                Custom
               </Link>
             </div>
           </div>

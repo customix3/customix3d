@@ -10,6 +10,12 @@
   body {
     @apply bg-cream-50 text-ink-900 font-sans antialiased;
     overflow-x: hidden;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(240, 90, 26, 0.07), transparent),
+      radial-gradient(ellipse 60% 40% at 100% 50%, rgba(45, 212, 191, 0.05), transparent);
+  }
+  ::selection {
+    @apply bg-brand-500 text-white;
   }
   img {
     max-width: 100%;
@@ -19,23 +25,25 @@
 
 @layer components {
   .card {
-    @apply bg-white rounded-2xl shadow-card border border-cream-200/80 overflow-hidden;
+    @apply overflow-hidden rounded-3xl border border-ink-900/5 bg-white/90 shadow-card backdrop-blur-sm;
   }
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-brand-500 text-white font-medium text-sm hover:bg-brand-600 transition-colors shadow-sm;
+    @apply inline-flex items-center justify-center gap-2 rounded-full bg-ink-900 px-6 py-3 text-sm font-semibold text-white shadow-soft transition hover:bg-brand-500 hover:shadow-glow;
   }
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-white text-ink-800 font-medium text-sm border border-cream-300 hover:bg-cream-100 transition-colors;
+    @apply inline-flex items-center justify-center gap-2 rounded-full border-2 border-ink-900/10 bg-white/80 px-6 py-3 text-sm font-semibold text-ink-900 backdrop-blur transition hover:border-brand-500 hover:text-brand-600;
   }
   .input {
-    @apply w-full px-4 py-2.5 rounded-xl border border-cream-300 bg-white text-ink-900 placeholder:text-ink-500 focus:outline-none focus:ring-2 focus:ring-brand-400/40 focus:border-brand-400 transition;
+    @apply w-full rounded-2xl border border-ink-900/10 bg-white px-4 py-3 text-ink-900 placeholder:text-ink-500 transition focus:border-brand-400 focus:outline-none focus:ring-4 focus:ring-brand-500/15;
   }
   .skeleton {
-    @apply animate-pulse bg-cream-200 rounded-lg;
+    @apply animate-pulse rounded-2xl bg-cream-200;
+  }
+  .chip {
+    @apply inline-flex items-center rounded-full border border-ink-900/10 bg-white/70 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-ink-600 backdrop-blur;
   }
 }
 
-/* Hide scrollbar on mobile category chips */
 .scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -44,11 +52,16 @@
   display: none;
 }
 
-.product-float:hover {
-  animation: float 3s ease-in-out infinite;
+/* Grain overlay for depth */
+.grain::before {
+  content: '';
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
-/* Tables: allow horizontal scroll on small screens */
 .table-wrap {
-  @apply w-full overflow-x-auto -mx-1 px-1;
+  @apply -mx-1 w-full overflow-x-auto px-1;
 }
