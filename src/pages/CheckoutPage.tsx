@@ -5,6 +5,7 @@ import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { openRazorpayCheckout } from '@/services/paymentService';
 import { UPI_CONFIG } from '@/services/upiConfig';
+import PaymentWaitingScreen from '@/components/PaymentWaitingScreen';
 import { useOrders } from '@/store/ordersStore';
 import { subscribeOffers, type Offer } from '@/services/firestoreAdmin';
 import PhoneInput, { splitPhone } from '@/components/PhoneInput';
@@ -44,6 +45,7 @@ export default function CheckoutPage() {
   });
   const [paymentMethod, setPaymentMethod] = useState<'upi' | 'razorpay'>('upi');
   const [utr, setUtr] = useState('');
+  const [paidAmount, setPaidAmount] = useState(0);
 
   useEffect(() => subscribeOffers(setOffers), []);
 
@@ -76,10 +78,11 @@ export default function CheckoutPage() {
   }, [user]);
 
   useEffect(() => {
-    if (!done || !orderId) return;
+    // Only auto-redirect for instant Razorpay success — UPI waits on confirmation screen
+    if (!done || !orderId || paymentMethod === 'upi') return;
     const t = setTimeout(() => navigate(`/orders/${orderId}`, { replace: true }), 3200);
     return () => clearTimeout(t);
-  }, [done, orderId, navigate]);
+  }, [done, orderId, navigate, paymentMethod]);
 
   const pickAddress = (id: string) => {
     setSelectedAddrId(id);
@@ -140,7 +143,17 @@ export default function CheckoutPage() {
   }
 
   if (done) {
-    const isPending = paymentMethod === 'upi';
+    // UPI: live waiting screen with 3-min timer until admin confirms
+    if (paymentMethod === 'upi') {
+      return (
+        <PaymentWaitingScreen
+          orderId={orderId}
+          utr={paymentId}
+          amount={paidAmount || amount}
+        />
+      );
+    }
+    // Razorpay: instant success
     return (
       <div className="mx-auto flex min-h-[70vh] max-w-md flex-col items-center justify-center px-4 py-16 text-center">
         <motion.div
@@ -149,29 +162,18 @@ export default function CheckoutPage() {
           transition={{ type: 'spring', stiffness: 200, damping: 12 }}
           className="mb-6 text-7xl sm:text-8xl"
         >
-          {isPending ? '⏳' : '🎉'}
+          🎉
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-          <h1 className="font-display mb-2 text-2xl font-bold sm:text-3xl">
-            {isPending ? 'Order received!' : 'Payment done!'}
-          </h1>
-          <p className="mb-1 text-lg text-slate-600">
-            {isPending
-              ? 'We will confirm your UPI payment shortly'
-              : 'Order placed successfully'}
-          </p>
+          <h1 className="font-display mb-2 text-2xl font-bold sm:text-3xl">Payment done!</h1>
+          <p className="mb-1 text-lg text-slate-600">Order placed successfully</p>
           <p className="mb-2 font-mono text-sm font-semibold text-brand-600">{orderId}</p>
-          {paymentId && (
-            <p className="mb-4 text-xs text-slate-400">
-              {isPending ? 'UTR: ' : 'Payment: '}
-              {paymentId}
-            </p>
-          )}
+          {paymentId && <p className="mb-4 text-xs text-slate-400">Payment: {paymentId}</p>}
           <Link
             to={`/orders/${orderId}`}
             className="mt-4 inline-block rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white"
           >
-            View order status
+            View tracking now
           </Link>
         </motion.div>
       </div>
@@ -265,6 +267,7 @@ export default function CheckoutPage() {
         }
       }
 
+      setPaidAmount(amount);
       clear();
       setOrderId(order.id);
       setPaymentId(payId);
