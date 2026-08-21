@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { openRazorpayCheckout } from '@/services/paymentService';
+import { UPI_CONFIG } from '@/services/upiConfig';
 import { useOrders } from '@/store/ordersStore';
 import { subscribeOffers, type Offer } from '@/services/firestoreAdmin';
 import PhoneInput, { splitPhone } from '@/components/PhoneInput';
@@ -41,6 +42,8 @@ export default function CheckoutPage() {
     state: 'Maharashtra',
     pincode: '',
   });
+  const [paymentMethod, setPaymentMethod] = useState<'upi' | 'razorpay'>('upi');
+  const [utr, setUtr] = useState('');
 
   useEffect(() => subscribeOffers(setOffers), []);
 
@@ -137,6 +140,7 @@ export default function CheckoutPage() {
   }
 
   if (done) {
+    const isPending = paymentMethod === 'upi';
     return (
       <div className="mx-auto flex min-h-[70vh] max-w-md flex-col items-center justify-center px-4 py-16 text-center">
         <motion.div
@@ -145,18 +149,29 @@ export default function CheckoutPage() {
           transition={{ type: 'spring', stiffness: 200, damping: 12 }}
           className="mb-6 text-7xl sm:text-8xl"
         >
-          🎉
+          {isPending ? '⏳' : '🎉'}
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-          <h1 className="font-display mb-2 text-2xl font-bold sm:text-3xl">Payment done!</h1>
-          <p className="mb-1 text-lg text-slate-600">Order placed successfully</p>
+          <h1 className="font-display mb-2 text-2xl font-bold sm:text-3xl">
+            {isPending ? 'Order received!' : 'Payment done!'}
+          </h1>
+          <p className="mb-1 text-lg text-slate-600">
+            {isPending
+              ? 'We will confirm your UPI payment shortly'
+              : 'Order placed successfully'}
+          </p>
           <p className="mb-2 font-mono text-sm font-semibold text-brand-600">{orderId}</p>
-          {paymentId && <p className="mb-4 text-xs text-slate-400">Payment: {paymentId}</p>}
+          {paymentId && (
+            <p className="mb-4 text-xs text-slate-400">
+              {isPending ? 'UTR: ' : 'Payment: '}
+              {paymentId}
+            </p>
+          )}
           <Link
             to={`/orders/${orderId}`}
             className="mt-4 inline-block rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white"
           >
-            View tracking now
+            View order status
           </Link>
         </motion.div>
       </div>
@@ -181,18 +196,36 @@ export default function CheckoutPage() {
       setError(addrErr);
       return;
     }
+
+    if (paymentMethod === 'upi') {
+      const cleanUtr = utr.replace(/\s/g, '');
+      if (cleanUtr.length < 8) {
+        setError('Enter the UTR / Transaction ID after paying via UPI');
+        return;
+      }
+    }
+
     setLoading(true);
     try {
-      const payment = await openRazorpayCheckout({
-        amountRupees: amount,
-        customerName: form.name,
-        customerEmail: form.email,
-        customerPhone: form.whatsapp,
-        description: `CustoMix3D order · ${items.length} item(s)`,
-      });
+      let payId = '';
+      let rzpOrder = '';
+      let orderStatus: 'Pending' | 'Paid' = 'Paid';
 
-      const payId = payment.razorpay_payment_id ? String(payment.razorpay_payment_id) : '';
-      const rzpOrder = payment.razorpay_order_id ? String(payment.razorpay_order_id) : '';
+      if (paymentMethod === 'razorpay') {
+        const payment = await openRazorpayCheckout({
+          amountRupees: amount,
+          customerName: form.name,
+          customerEmail: form.email,
+          customerPhone: form.whatsapp,
+          description: `CustoMix3D order · ${items.length} item(s)`,
+        });
+        payId = payment.razorpay_payment_id ? String(payment.razorpay_payment_id) : '';
+        rzpOrder = payment.razorpay_order_id ? String(payment.razorpay_order_id) : '';
+        orderStatus = 'Paid';
+      } else {
+        payId = utr.replace(/\s/g, '').toUpperCase();
+        orderStatus = 'Pending';
+      }
 
       const orderPayload: Parameters<typeof addOrder>[0] = {
         customerName: form.name,
@@ -209,14 +242,13 @@ export default function CheckoutPage() {
           ...(i.image ? { image: i.image } : {}),
         })),
         total: amount,
-        status: 'Paid',
+        status: orderStatus,
       };
       if (payId) orderPayload.paymentId = payId;
       if (rzpOrder) orderPayload.razorpayOrderId = rzpOrder;
 
       const order = await addOrder(orderPayload);
 
-      // Save address to user profile for next order
       if (saveThisAddr && user.id) {
         try {
           const list = await saveUserAddress(user.id, {
@@ -395,7 +427,76 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        <div className="lg:col-span-2">
+        <div className="space-y-6 lg:col-span-2">
+          <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm sm:p-6">
+            <h2 className="mb-4 font-semibold">Payment method</h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => setPaymentMethod('upi')}
+                className={`rounded-xl border-2 px-4 py-3 text-left text-sm font-semibold transition ${
+                  paymentMethod === 'upi'
+                    ? 'border-brand-500 bg-brand-50 text-brand-700'
+                    : 'border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                <span className="block">UPI / QR</span>
+                <span className="mt-0.5 block text-xs font-normal text-slate-500">
+                  Pay & enter UTR (temporary)
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPaymentMethod('razorpay')}
+                className={`rounded-xl border-2 px-4 py-3 text-left text-sm font-semibold transition ${
+                  paymentMethod === 'razorpay'
+                    ? 'border-brand-500 bg-brand-50 text-brand-700'
+                    : 'border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                <span className="block">Razorpay</span>
+                <span className="mt-0.5 block text-xs font-normal text-slate-500">
+                  Card / UPI / Netbanking (demo)
+                </span>
+              </button>
+            </div>
+
+            {paymentMethod === 'upi' && (
+              <div className="mt-5 space-y-4 rounded-xl border border-dashed border-brand-200 bg-brand-50/50 p-4">
+                <p className="text-sm font-medium text-ink-800">
+                  Pay ₹{amount} to this UPI ID
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <code className="rounded-lg bg-white px-3 py-2 font-mono text-sm font-bold text-brand-700 shadow-sm">
+                    {UPI_CONFIG.upiId}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard?.writeText(UPI_CONFIG.upiId);
+                    }}
+                    className="rounded-lg bg-ink-900 px-3 py-2 text-xs font-semibold text-white"
+                  >
+                    Copy
+                  </button>
+                </div>
+                <p className="text-xs text-slate-500">
+                  Open any UPI app → Pay to the ID above → copy the UTR / Transaction ID and paste below.
+                </p>
+                <div>
+                  <label className="text-sm font-medium">UTR / Transaction ID *</label>
+                  <input
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-mono text-sm tracking-wide"
+                    placeholder="e.g. 123456789012"
+                    value={utr}
+                    onChange={(e) => setUtr(e.target.value)}
+                    required={paymentMethod === 'upi'}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm sm:p-6 lg:sticky lg:top-20">
             <h2 className="mb-4 font-semibold">Order summary</h2>
             <ul className="space-y-3 text-sm">
@@ -455,7 +556,13 @@ export default function CheckoutPage() {
               disabled={loading}
               className="mt-4 w-full rounded-full bg-slate-900 py-3.5 text-sm font-semibold text-white disabled:opacity-60"
             >
-              {loading ? 'Opening payment…' : `Pay ₹${amount}`}
+              {loading
+                ? paymentMethod === 'upi'
+                  ? 'Placing order…'
+                  : 'Opening payment…'
+                : paymentMethod === 'upi'
+                  ? `I have paid ₹${amount}`
+                  : `Pay ₹${amount}`}
             </button>
           </div>
         </div>
