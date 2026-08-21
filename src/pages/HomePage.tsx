@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowUpRight, Sparkles } from 'lucide-react';
+import { ArrowUpRight, Sparkles, Layers, Printer } from 'lucide-react';
 import ProductCard from '@/components/ProductCard';
 import { CATEGORIES } from '@/data/demoProducts';
 import { useProducts } from '@/store/productsStore';
@@ -19,6 +19,16 @@ export default function HomePage() {
       <section className="relative isolate min-h-[88vh] overflow-hidden grain">
         <div className="pointer-events-none absolute -left-24 top-20 h-72 w-72 rounded-full bg-brand-400/20 blur-3xl" />
         <div className="pointer-events-none absolute -right-16 bottom-10 h-80 w-80 rounded-full bg-mint-400/15 blur-3xl" />
+        <motion.div
+          className="pointer-events-none absolute left-[12%] top-[30%] h-16 w-16 rounded-lg border border-brand-400/20 bg-brand-400/5"
+          animate={{ y: [0, -18, 0], rotate: [0, 6, 0] }}
+          transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
+        />
+        <motion.div
+          className="pointer-events-none absolute right-[18%] top-[22%] h-10 w-10 rounded-md border border-mint-400/25 bg-mint-400/10"
+          animate={{ y: [0, 14, 0], rotate: [0, -8, 0] }}
+          transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut' }}
+        />
 
         <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-4 pb-16 pt-12 md:grid-cols-12 md:gap-8 md:pt-20">
           <motion.div
@@ -80,6 +90,7 @@ export default function HomePage() {
                 className="aspect-[4/5] w-full object-cover opacity-95"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-ink-900/80 via-transparent to-transparent" />
+              <div className="pointer-events-none absolute inset-0 layer-scan opacity-40" />
               <motion.div
                 className="absolute bottom-5 left-5 right-5 rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur-md"
                 animate={{ y: [0, -6, 0] }}
@@ -94,9 +105,15 @@ export default function HomePage() {
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-14">
-        <div className="mb-8">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-500">Worlds</p>
-          <h2 className="font-display mt-1 text-3xl font-bold tracking-tight sm:text-4xl">Pick a shelf</h2>
+        <div className="mb-8 flex items-end justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-500">Worlds</p>
+            <h2 className="font-display mt-1 text-3xl font-bold tracking-tight sm:text-4xl">Pick a shelf</h2>
+          </div>
+          <div className="hidden items-center gap-1.5 text-xs font-medium text-ink-500 sm:flex">
+            <Layers className="h-3.5 w-3.5 text-brand-400" />
+            Layered by category
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-5 md:gap-4">
           {CATEGORIES.map((c, i) => (
@@ -106,7 +123,7 @@ export default function HomePage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.06 }}
-                whileHover={{ y: -6 }}
+                whileHover={{ y: -8 }}
                 className="relative overflow-hidden rounded-3xl border border-ink-900/5 bg-ink-900"
               >
                 <div className="aspect-[3/4] overflow-hidden">
@@ -148,7 +165,12 @@ export default function HomePage() {
           <div className="relative overflow-hidden rounded-[2rem] bg-ink-900 px-6 py-14 text-center sm:px-12 sm:py-20">
             <div className="pointer-events-none absolute -left-10 top-0 h-40 w-40 rounded-full bg-brand-500/30 blur-3xl" />
             <div className="pointer-events-none absolute -right-10 bottom-0 h-48 w-48 rounded-full bg-mint-400/20 blur-3xl" />
-            <p className="text-xs font-bold uppercase tracking-[0.25em] text-brand-300">One of one</p>
+            <div className="mb-4 flex justify-center">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-brand-300">
+                <Printer className="h-3.5 w-3.5" />
+                One of one
+              </span>
+            </div>
             <h2 className="font-display mx-auto mt-3 max-w-xl text-3xl font-extrabold text-white sm:text-5xl">
               {cms.customTitle}
             </h2>
@@ -168,6 +190,9 @@ export default function HomePage() {
         <div className="mb-8">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-brand-500">Full shelf</p>
           <h2 className="font-display mt-1 text-3xl font-bold tracking-tight">Everything live</h2>
+          <p className="mt-2 max-w-lg text-sm text-ink-500">
+            Scroll the shelf. Every piece was printed layer by layer — just like your patience.
+          </p>
         </div>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-6">
           {products.map((p, i) => (
