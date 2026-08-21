@@ -2,10 +2,10 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import App from './App';
 import { AuthProvider } from './context/AuthContext';
 import { SiteProvider } from './context/SiteContext';
 import CatalogBootstrap from './components/CatalogBootstrap';
+import AppShell from './components/AppShell';
 import './index.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
@@ -14,8 +14,19 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <SiteProvider>
         <AuthProvider>
           <CatalogBootstrap />
-          <App />
-          <Toaster position="top-center" />
+          <AppShell />
+          <Toaster
+            position="bottom-center"
+            toastOptions={{
+              className: 'font-sans text-sm font-medium',
+              style: {
+                background: '#12100e',
+                color: '#fff',
+                borderRadius: '9999px',
+                border: '1px solid rgba(255,255,255,0.08)',
+              },
+            }}
+          />
         </AuthProvider>
       </SiteProvider>
     </BrowserRouter>
