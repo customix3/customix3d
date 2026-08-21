@@ -26,7 +26,7 @@ export default function Navbar() {
   }, [open]);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-ink-900/5 bg-cream-50/80 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 border-b border-ink-900/5 bg-cream-50/85 backdrop-blur-2xl">
       <div className="mx-auto flex h-14 max-w-7xl items-center gap-2 px-3 sm:h-16 sm:gap-4 sm:px-4">
         <button
           type="button"
@@ -42,6 +42,7 @@ export default function Navbar() {
           onClick={() => setOpen(false)}
         >
           CUSTO<span className="text-brand-500">MIX</span>
+          <span className="ml-0.5 align-super text-[10px] font-bold text-ink-500">3D</span>
         </Link>
 
         <SearchBox className="mx-4 hidden min-w-0 flex-1 max-w-md md:block" />
