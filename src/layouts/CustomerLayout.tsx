@@ -4,6 +4,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import PromoPopup from '@/components/PromoPopup';
 import LiveOrdersTicker from '@/components/LiveOrdersTicker';
+import FloatingSarcasm from '@/components/FloatingSarcasm';
 import { subscribeHomepage, DEFAULT_HOME } from '@/services/homepageCms';
 
 export default function CustomerLayout() {
@@ -20,6 +21,7 @@ export default function CustomerLayout() {
       <Footer />
       <PromoPopup />
       {showLive && <LiveOrdersTicker />}
+      <FloatingSarcasm />
     </div>
   );
 }
