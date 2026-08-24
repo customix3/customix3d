@@ -83,7 +83,10 @@ export default function Navbar() {
             {c.name}
           </Link>
         ))}
-        <Link to="/custom" className="text-brand-500">
+        <Link to="/name-it" className="text-brand-500">
+          Name it
+        </Link>
+        <Link to="/custom" className="transition hover:text-brand-500">
           Custom
         </Link>
       </nav>
@@ -98,6 +101,9 @@ export default function Navbar() {
               {c.name}
             </Link>
           ))}
+          <Link to="/name-it" className="chip shrink-0 border-mint-400/40 bg-mint-400/15 text-ink-900">
+            Name it
+          </Link>
           <Link to="/custom" className="chip shrink-0 border-brand-200 bg-brand-50 text-brand-700">
             Custom
           </Link>
@@ -124,8 +130,15 @@ export default function Navbar() {
                 </Link>
               ))}
               <Link
-                to="/custom"
+                to="/name-it"
                 className="block rounded-2xl px-3 py-3 text-sm font-semibold text-brand-500"
+                onClick={() => setOpen(false)}
+              >
+                Name it
+              </Link>
+              <Link
+                to="/custom"
+                className="block rounded-2xl px-3 py-3 text-sm font-semibold"
                 onClick={() => setOpen(false)}
               >
                 Custom
