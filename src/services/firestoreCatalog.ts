@@ -64,6 +64,13 @@ function mapProduct(id: string, data: Record<string, unknown>): Product {
       y: Number(tb.y) || 55,
       width: Number(tb.width) || 70,
       fontSize: Number(tb.fontSize) || 8,
+      rotate: Number(tb.rotate) || 0,
+      showBorder: tb.showBorder !== false,
+      borderWidth: tb.borderWidth != null ? Number(tb.borderWidth) : 1,
+      borderColor: tb.borderColor ? String(tb.borderColor) : 'rgba(240,90,26,0.55)',
+      font: tb.font ? String(tb.font) : 'syne',
+      color: tb.color ? String(tb.color) : '#12100e',
+      letterSpacing: tb.letterSpacing != null ? Number(tb.letterSpacing) : 1,
     };
   }
   return {
@@ -155,15 +162,7 @@ export async function createProduct(input: Omit<Product, 'id'>): Promise<Product
       updatedAt: serverTimestamp(),
     })
   );
-  return {
-    ...input,
-    id,
-    image,
-    images,
-    active: input.active !== false,
-    stock,
-    personalizable: input.personalizable === true,
-  };
+  return { ...input, id, image, images, active: input.active !== false, stock, personalizable: input.personalizable === true };
 }
 
 export async function patchProduct(id: string, patch: Partial<Product>): Promise<void> {
@@ -222,10 +221,7 @@ export function subscribeOrders(onData: (list: FsOrder[]) => void, onError?: (e:
         const data = d.data();
         return {
           id: d.id,
-          createdAt:
-            data.createdAt?.toDate?.()?.toISOString?.() ||
-            data.createdAtIso ||
-            new Date().toISOString(),
+          createdAt: data.createdAt?.toDate?.()?.toISOString?.() || data.createdAtIso || new Date().toISOString(),
           customerName: data.customerName || '',
           customerEmail: data.customerEmail || '',
           customerWhatsapp: data.customerWhatsapp || '',
@@ -250,9 +246,7 @@ export function subscribeOrders(onData: (list: FsOrder[]) => void, onError?: (e:
   );
 }
 
-export async function createOrderFs(
-  input: Omit<FsOrder, 'id' | 'createdAt'> & { status?: string }
-): Promise<FsOrder> {
+export async function createOrderFs(input: Omit<FsOrder, 'id' | 'createdAt'> & { status?: string }): Promise<FsOrder> {
   if (!db) throw new Error('Firestore not configured');
   const id = 'ORD-' + Date.now().toString(36).toUpperCase();
   const createdAtIso = new Date().toISOString();
@@ -264,12 +258,7 @@ export async function createOrderFs(
     city: String(input.city || ''),
     pincode: String(input.pincode || ''),
     items: (input.items || []).map((i) => {
-      const row: Record<string, unknown> = {
-        id: String(i.id || ''),
-        name: String(i.name || ''),
-        price: Number(i.price) || 0,
-        quantity: Number(i.quantity) || 1,
-      };
+      const row: Record<string, unknown> = { id: String(i.id || ''), name: String(i.name || ''), price: Number(i.price) || 0, quantity: Number(i.quantity) || 1 };
       if (i.image) row.image = String(i.image);
       return row;
     }),
@@ -279,9 +268,7 @@ export async function createOrderFs(
     createdAtIso,
   };
   if (input.paymentId && String(input.paymentId).trim()) payload.paymentId = String(input.paymentId);
-  if (input.razorpayOrderId && String(input.razorpayOrderId).trim()) {
-    payload.razorpayOrderId = String(input.razorpayOrderId);
-  }
+  if (input.razorpayOrderId && String(input.razorpayOrderId).trim()) payload.razorpayOrderId = String(input.razorpayOrderId);
   await setDoc(doc(db, ORDERS, id), payload);
   return {
     id,
