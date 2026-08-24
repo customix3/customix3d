@@ -26,6 +26,7 @@ import ShippingPage from './pages/ShippingPage';
 import AdminLoginPage from './admin/AdminLoginPage';
 import AdminDashboard from './admin/AdminDashboard';
 import AdminProducts from './admin/AdminProducts';
+import AdminNameItProducts from './admin/AdminNameItProducts';
 import AdminOrders from './admin/AdminOrders';
 import AdminCustomOrders from './admin/AdminCustomOrders';
 import AdminCustomers from './admin/AdminCustomers';
@@ -80,6 +81,7 @@ export default function App() {
           <Route path="homepage" element={<AdminHomepage />} />
           <Route path="categories" element={<AdminCategories />} />
           <Route path="products" element={<AdminProducts />} />
+          <Route path="name-it-products" element={<AdminNameItProducts />} />
           <Route path="orders" element={<AdminOrders />} />
           <Route path="custom-orders" element={<AdminCustomOrders />} />
           <Route path="customers" element={<AdminCustomers />} />
