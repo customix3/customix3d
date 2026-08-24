@@ -13,6 +13,7 @@ import {
   X,
   LayoutTemplate,
   FolderOpen,
+  Type,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useSite } from '@/context/SiteContext';
@@ -23,6 +24,7 @@ const links = [
   { to: '/admin/homepage', label: 'Page layout', icon: LayoutTemplate },
   { to: '/admin/categories', label: 'Categories', icon: FolderOpen },
   { to: '/admin/products', label: 'Products', icon: Package },
+  { to: '/admin/name-it-products', label: 'Name it products', icon: Type },
   { to: '/admin/orders', label: 'Orders', icon: ShoppingBag },
   { to: '/admin/custom-orders', label: 'Custom', icon: FileBox },
   { to: '/admin/customers', label: 'Customers', icon: Users },
