@@ -7,6 +7,7 @@ import ProductDetailPage from './pages/ProductDetailPage';
 import CategoryPage from './pages/CategoryPage';
 import CustomPage from './pages/CustomPage';
 import PersonalizePage from './pages/PersonalizePage';
+import PersonalizeShopPage from './pages/PersonalizeShopPage';
 import CartPage from './pages/CartPage';
 import CheckoutPage from './pages/CheckoutPage';
 import LoginPage from './pages/LoginPage';
@@ -53,6 +54,7 @@ export default function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/products" element={<ProductsPage />} />
           <Route path="/products/:id" element={<ProductDetailPage />} />
+          <Route path="/name-it" element={<PersonalizeShopPage />} />
           <Route path="/personalize/:id" element={<PersonalizePage />} />
           <Route path="/category/:category" element={<CategoryPage />} />
           <Route path="/custom" element={<CustomPage />} />
