@@ -16,9 +16,10 @@ export default function ProductsPage() {
   }, [urlQ]);
 
   const results = useMemo(() => {
-    const active = all.filter((p) => p.active !== false);
+    // Personalizable products live on /name-it — keep main shop clean
+    const active = all.filter((p) => p.active !== false && !p.personalizable);
     if (!q.trim()) return active.map((p) => ({ ...p, score: 0 }));
-    return searchProducts(all, q);
+    return searchProducts(active, q);
   }, [q, all]);
 
   const weak = q.trim() ? isWeakMatch(results) : false;
@@ -64,7 +65,6 @@ export default function ProductsPage() {
         ))}
       </div>
 
-      {/* Custom order always last when no / weak match */}
       {showCustom && (
         <div className="mt-10 rounded-2xl border border-brand-100 bg-brand-50 p-6 text-center sm:p-8">
           <Sparkles className="mx-auto mb-3 h-8 w-8 text-brand-600" />
@@ -86,6 +86,17 @@ export default function ProductsPage() {
       {!q.trim() && results.length === 0 && (
         <p className="py-16 text-center text-slate-500">No products yet.</p>
       )}
+
+      <div className="mt-12 rounded-2xl border border-mint-400/30 bg-gradient-to-r from-slate-900 to-slate-800 p-6 text-center">
+        <p className="font-display text-lg font-bold text-white">Want your name on a print?</p>
+        <p className="mt-1 text-sm text-white/70">Personalizable products have their own shop.</p>
+        <Link
+          to="/name-it"
+          className="mt-4 inline-flex rounded-full bg-brand-500 px-5 py-2.5 text-sm font-semibold text-white"
+        >
+          Open Name it
+        </Link>
+      </div>
     </div>
   );
 }
