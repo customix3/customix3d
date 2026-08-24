@@ -1,6 +1,7 @@
 export const CATEGORIES = [
   { name: 'Home Decor', slug: 'home-decor', image: 'https://images.unsplash.com/photo-1485955900006-10f4d324d411?w=600&q=80' },
   { name: 'Desk Accessories', slug: 'desk-accessories', image: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=600&q=80' },
+  { name: 'Name it', slug: 'name-it', image: 'https://images.unsplash.com/photo-1611930022073-b7a4ba5fcccd?w=600&q=80' },
   { name: 'Keychains', slug: 'keychains', image: 'https://images.unsplash.com/photo-1611930022073-b7a4ba5fcccd?w=600&q=80' },
   { name: 'Miniatures', slug: 'miniatures', image: 'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=600&q=80' },
   { name: 'Gadgets', slug: 'gadgets', image: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=600&q=80' },
@@ -29,8 +30,9 @@ export const DEMO_PRODUCTS = [
     name: 'Custom Name Keychain',
     price: 199,
     image: 'https://images.unsplash.com/photo-1611930022073-b7a4ba5fcccd?w=800&q=80',
-    category: 'keychains',
+    category: 'name-it',
     description: 'Personalized 3D printed keychain with your name.',
+    personalizable: true,
   },
   {
     id: '4',
