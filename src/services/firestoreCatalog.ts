@@ -67,6 +67,7 @@ function mapProduct(id: string, data: Record<string, unknown>): Product {
     description: String(data.description || ''),
     active: data.active !== false,
     stock: Number.isFinite(stock) ? stock : 99,
+    personalizable: data.personalizable === true,
   };
 }
 
@@ -88,6 +89,7 @@ export async function seedProductsIfEmpty(): Promise<void> {
           description: p.description,
           active: true,
           stock: 25,
+          personalizable: (p as { personalizable?: boolean }).personalizable === true,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         })
@@ -134,11 +136,20 @@ export async function createProduct(input: Omit<Product, 'id'>): Promise<Product
       description: input.description,
       active: input.active !== false,
       stock,
+      personalizable: input.personalizable === true,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     })
   );
-  return { ...input, id, image, images, active: input.active !== false, stock };
+  return {
+    ...input,
+    id,
+    image,
+    images,
+    active: input.active !== false,
+    stock,
+    personalizable: input.personalizable === true,
+  };
 }
 
 export async function patchProduct(id: string, patch: Partial<Product>): Promise<void> {
@@ -158,6 +169,7 @@ export async function patchProduct(id: string, patch: Partial<Product>): Promise
   if (patch.description !== undefined) data.description = patch.description;
   if (patch.active !== undefined) data.active = patch.active;
   if (patch.stock !== undefined) data.stock = Number(patch.stock);
+  if (patch.personalizable !== undefined) data.personalizable = patch.personalizable === true;
   await updateDoc(doc(db, PRODUCTS, id), data);
 }
 
